@@ -7,4 +7,5 @@ if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
   Write-Host "FFmpeg not found. Install with: winget install Gyan.FFmpeg"
 }
 & .\.venv\Scripts\autotube.exe init
-Write-Host "Install Ollama from https://ollama.com and run: ollama pull qwen2.5:7b-instruct"
+Write-Host "Install Ollama from https://ollama.com and run: ollama pull qwen3.5:9b"
+Write-Host "Fallback for lower VRAM pressure: set AUTOTUBE_LLM_MODEL=qwen3:8b after pulling that model."
