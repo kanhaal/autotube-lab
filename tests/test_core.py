@@ -24,7 +24,7 @@ def test_deduplicate_prefers_high_reliability_same_url():
 
 
 def test_performance_score_matches_weights_and_renormalizes_missing():
-    metrics = dict(retention=0.70, views_ratio=1.2, ctr=0.08, subs_per_1k=10, watch_per_1k_imp=120)
+    metrics = {'retention':0.70, 'views_ratio':1.2, 'ctr':0.08, 'subs_per_1k':10, 'watch_per_1k_imp':120}
     s = performance_score(metrics)
     assert 0 < s < 2
     s2 = performance_score({'retention': .7, 'ctr': .08})
