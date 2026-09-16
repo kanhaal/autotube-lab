@@ -17,8 +17,10 @@ Requirements: Python 3.11+, FFmpeg, Ollama, and a Google Cloud OAuth Desktop cli
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup_windows.ps1
-ollama pull qwen2.5:7b-instruct
+ollama pull qwen3.5:9b
 ```
+
+`qwen3.5:9b` is the default local writing model. Override it at any time with the `AUTOTUBE_LLM_MODEL` environment variable; `qwen3:8b` is the recommended lower-VRAM fallback.
 
 Put the OAuth Desktop client JSON at `client_secret.json`. It is gitignored.
 
