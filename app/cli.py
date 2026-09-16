@@ -28,7 +28,8 @@ def cmd_auth(args):
 def cmd_run(args):
     from app.orchestration.daily import run_channel
     r=_repo(args); out=Path(args.output); out.mkdir(parents=True,exist_ok=True)
-    day=(datetime.now().date()-datetime(2026,9,16).date()).days
+    now=datetime.now(timezone.utc)
+    day=(now.date()-datetime(2026,9,16,tzinfo=timezone.utc).date()).days
     results=[]
     for cid in ([args.channel] if args.channel!='all' else ['kernelrush','lobbysignal']):
         tts=publisher=None
