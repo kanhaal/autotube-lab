@@ -1,5 +1,5 @@
 from __future__ import annotations
-import sqlite3, json
+import sqlite3
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from app.domain.models import Publication, AnalyticsSnapshot
