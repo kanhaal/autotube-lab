@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, urllib.request
+import json, os, urllib.request
 
 SYSTEM_PROMPT='''You are the writer for a high-retention faceless YouTube news channel. Use ONLY the supplied research packet. Never invent numbers, dates, quotes, causality, or capabilities. Write 650-900 spoken words: 5-12 second hook, immediate context, 3-5 clear sections, a section literally titled "Why it matters", and a tight close. Explain rather than hype. Attribute uncertainty. No generic intro, no like/subscribe filler.'''
 
@@ -24,8 +24,9 @@ class TemplateScriptEngine:
         return '\n'.join(blocks)
 
 class OllamaScriptEngine:
-    def __init__(self,model='qwen2.5:7b-instruct',base_url='http://127.0.0.1:11434'):
-        self.model=model; self.base=base_url.rstrip('/')
+    def __init__(self,model=None,base_url='http://127.0.0.1:11434'):
+        self.model=model or os.getenv('AUTOTUBE_LLM_MODEL','qwen3.5:9b')
+        self.base=base_url.rstrip('/')
     def generate(self,packet:dict)->str:
         payload=json.dumps({'model':self.model,'stream':False,'prompt':SYSTEM_PROMPT+'\n\nRESEARCH PACKET:\n'+json.dumps(packet,ensure_ascii=False) }).encode()
         req=urllib.request.Request(self.base+'/api/generate',data=payload,headers={'Content-Type':'application/json'})
