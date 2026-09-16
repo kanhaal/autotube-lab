@@ -19,6 +19,9 @@ class Repository:
     def get_publication(self,eid:str):
         with self._c() as c: r=c.execute('SELECT * FROM publications WHERE episode_id=?',(eid,)).fetchone()
         return Publication(r[0],r[1],r[2],r[3],datetime.fromisoformat(r[4])) if r else None
+    def list_publications(self,channel_id:str):
+        with self._c() as c: rows=c.execute('SELECT * FROM publications WHERE channel_id=? ORDER BY created_at',(channel_id,)).fetchall()
+        return [Publication(r[0],r[1],r[2],r[3],datetime.fromisoformat(r[4])) for r in rows]
     def save_analytics(self,a:AnalyticsSnapshot):
         with self._c() as c:c.execute('INSERT OR REPLACE INTO analytics VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(a.video_id,a.channel_id,a.niche,a.published_at.isoformat(),a.snapshot_at.isoformat(),a.impressions,a.ctr,a.views,a.retention,a.watch_minutes,a.subscribers_gained,a.subscribers_lost))
     def mature_analytics(self,channel_id:str,now:datetime|None=None,min_age_days:int=7):
