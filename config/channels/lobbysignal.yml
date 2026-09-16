@@ -1,0 +1,10 @@
+id: lobbysignal
+name: LobbySignal
+handle: LobbySignal
+tagline: What the internet is playing and talking about.
+niches: [gaming, internet_culture]
+brand:
+  background: "#0D0914"
+  foreground: "#FAF7FF"
+  accent: "#FF4FD8"
+  secondary: "#7CFF5B"

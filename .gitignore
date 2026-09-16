@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+data/*.db
+data/*.sqlite*
+data/oauth/
+output/*
+!output/.gitkeep
+*.mp4
+*.wav
+*.srt
+client_secret*.json
+token*.json
+.DS_Store

@@ -1,0 +1,4 @@
+id: gaming
+channel_id: lobbysignal
+label: Gaming news & player trends
+sources: [steam, rss]

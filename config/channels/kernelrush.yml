@@ -1,0 +1,10 @@
+id: kernelrush
+name: KernelRush
+handle: KernelRushHQ
+tagline: The signal behind what ships next.
+niches: [ai_software, open_source, consumer_tech]
+brand:
+  background: "#0A0D12"
+  foreground: "#F5F7FA"
+  accent: "#5EF2C2"
+  secondary: "#7AA2FF"

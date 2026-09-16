@@ -1,0 +1,4 @@
+id: ai_software
+channel_id: kernelrush
+label: AI & software launches
+sources: [hackernews, huggingface, rss]

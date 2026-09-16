@@ -1,0 +1,4 @@
+id: consumer_tech
+channel_id: kernelrush
+label: Consumer tech & apps
+sources: [hackernews, rss]

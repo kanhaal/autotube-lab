@@ -1,0 +1,4 @@
+id: open_source
+channel_id: kernelrush
+label: Open-source & GitHub radar
+sources: [github, hackernews]
