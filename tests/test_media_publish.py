@@ -31,3 +31,17 @@ def test_private_first_does_not_schedule_until_processing_done(tmp_path: Path):
     result=pub.stage(video,thumb,{'title':'x','description':'y'})
     assert result.status=='processing'
     assert y.scheduled is None
+
+
+def test_private_first_waits_then_schedules(monkeypatch, tmp_path: Path):
+    class SequencedYT(FakeYT):
+        def __init__(self):
+            super().__init__(); self.states=iter(['processing','processing','succeeded'])
+        def processing_state(self, video_id): return next(self.states)
+    y=SequencedYT(); pub=PrivateFirstPublisher(y)
+    monkeypatch.setattr('app.publishing.youtube.time.sleep', lambda _: None)
+    video=tmp_path/'v.mp4'; video.write_bytes(b'x')
+    thumb=tmp_path/'t.png'; thumb.write_bytes(b'x')
+    result=pub.stage_and_schedule(video,thumb,{'title':'x'},publish_at='2026-09-17T12:00:00Z',poll_seconds=0,max_polls=5)
+    assert result.status == 'succeeded'
+    assert y.scheduled == '2026-09-17T12:00:00Z'
