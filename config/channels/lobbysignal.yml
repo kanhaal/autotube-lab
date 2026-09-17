@@ -8,3 +8,16 @@ brand:
   foreground: "#FAF7FF"
   accent: "#FF4FD8"
   secondary: "#7CFF5B"
+voice:
+  backend: chatterbox
+  fallback_backend: kokoro
+  profile: lobbysignal_energetic
+  settings:
+    exaggeration: 0.58
+    cfg_weight: 0.38
+  fallback_settings:
+    voice: af_heart
+    speed: 1.05
+audio:
+  mood: energetic
+  music_enabled: true
