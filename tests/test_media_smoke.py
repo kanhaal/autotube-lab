@@ -105,6 +105,22 @@ def test_tiny_render_uses_resolved_windows_npx_shim(monkeypatch):
     assert commands[0][0] == resolved["npx"]
 
 
+def test_media_subprocess_decodes_utf8_with_replacement(monkeypatch):
+    from app.health import media
+
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(media.subprocess, "run", fake_run)
+    media._run(["tool"])
+
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"
+
+
 def test_media_smoke_missing_tools_are_reported_not_raised(monkeypatch):
     from app.health import media
 
