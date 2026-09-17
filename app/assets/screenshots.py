@@ -51,4 +51,5 @@ class ScreenshotCapture:
             license_note="source-page screenshot",
             sha256=sha256_file(target),
             captured_at=datetime.now(timezone.utc),
+            scene_id=request.scene_id,
         )
