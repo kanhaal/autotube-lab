@@ -5,7 +5,13 @@ import {motionStyle, transitionPreset} from '../motion';
 import type {MotionName, TransitionName} from '../motion';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
-const imageKinds = new Set(['image', 'screenshot', 'source_screenshot', 'fallback_card']);
+const imageKinds = new Set([
+  'image',
+  'screenshot',
+  'source_screenshot',
+  'fallback_card',
+  'fallback_editorial',
+]);
 const verifiedAssetSceneTypes = new Set(['source_browser', 'device', 'github', 'game_store']);
 
 const dataString = (scene: SceneSpecV1, key: string): string => {
@@ -24,6 +30,11 @@ export const resolveSceneAsset = (
     const match = assets.find((asset) => asset.id === id && imageKinds.has(asset.kind));
     if (match) return match;
   }
+
+  const sceneBound = assets.find(
+    (asset) => asset.scene_id === scene.id && imageKinds.has(asset.kind),
+  );
+  if (sceneBound) return sceneBound;
 
   const sourceUrl = dataString(scene, 'source_url') || dataString(scene, 'url');
   if (sourceUrl) {
