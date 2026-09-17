@@ -41,6 +41,13 @@ def test_sample_render_script_uses_project_virtualenv_python():
     assert "\n    python scripts/render_sample_story.py" not in text
 
 
+def test_sample_story_releases_tts_before_loading_whisper():
+    text = Path("scripts/render_sample_story.py").read_text(encoding="utf-8")
+    assert "tts.release()" in text
+    assert "transcriber.release()" in text
+    assert text.index("tts.release()") < text.index("transcriber = FasterWhisperTranscriber()")
+
+
 def test_caption_transcriber_defaults_can_be_overridden_by_environment(monkeypatch):
     from app.captions.align import FasterWhisperTranscriber
 
