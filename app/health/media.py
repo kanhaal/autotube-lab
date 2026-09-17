@@ -19,6 +19,8 @@ def _run(command: list[str], *, cwd: Path | None = None, timeout: int = 30):
         cwd=str(cwd) if cwd else None,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout,
         check=False,
     )
