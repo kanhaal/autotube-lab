@@ -41,6 +41,7 @@ def run_channel(
     dry_run=True,
     script_engine=None,
     editorial_llm=None,
+    asset_capturer=None,
     tts=None,
     publisher=None,
     publish_at=None,
@@ -100,6 +101,7 @@ def run_channel(
         )
         (directory / "script.txt").write_text(script, encoding="utf-8")
 
+        asset_manifest = None
         if editorial_bundle is not None and scene_plan is not None:
             (directory / "editorial.json").write_text(
                 json.dumps(asdict(editorial_bundle), ensure_ascii=False, indent=2),
@@ -108,6 +110,15 @@ def run_channel(
             (directory / "scenes.json").write_text(
                 json.dumps(asdict(scene_plan), ensure_ascii=False, indent=2),
                 encoding="utf-8",
+            )
+            from app.orchestration.editorial import prepare_episode_assets
+
+            asset_manifest = prepare_episode_assets(
+                scene_plan,
+                packet,
+                cfg,
+                directory,
+                asset_capturer,
             )
 
         thumbs = [
@@ -131,6 +142,8 @@ def run_channel(
         if editorial_bundle is not None:
             result["editorial"] = str(directory / "editorial.json")
             result["scenes"] = str(directory / "scenes.json")
+        if asset_manifest is not None:
+            result["asset_manifest"] = str(directory / "asset-manifest.json")
 
         if tts:
             wav = tts.synthesize(script, directory / "narration.wav")
