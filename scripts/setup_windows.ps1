@@ -33,4 +33,4 @@ Write-Host "Setup complete. Large local model weights are not downloaded automat
 Write-Host "Install the configured local LLM manually with: ollama pull qwen3.5:9b"
 Write-Host "Then run: .\.venv\Scripts\autotube.exe media-smoke"
 Write-Host "For the sequential model-load + tiny-render check, run: .\.venv\Scripts\autotube.exe media-smoke --deep"
-Write-Host "Keep the scheduler on run-daily --render until supervised KernelRush + LobbySignal review is complete."
+Write-Host "Keep the scheduler on run-daily --render --renderer professional until supervised KernelRush + LobbySignal review is complete."
