@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -74,6 +75,82 @@ def produce_episode(seed: Mapping[str, Any], stages: ProductionStages) -> Produc
     if not isinstance(report, QualityReport):
         raise TypeError("qa stage must provide a QualityReport as quality_report")
     return ProductionResult(state=state, quality_report=report)
+
+
+def apply_visual_review(
+    result: ProductionResult,
+    *,
+    channel_id: str,
+    output_dir: Path,
+    stages: ProductionStages,
+    llm,
+    contact_sheet_builder=None,
+    critic=None,
+    visual_corrector=None,
+) -> ProductionResult:
+    """Run advisory visual QA after hard QA, with at most one opt-in correction rerender."""
+
+    if not result.quality_report.ok or result.long_video is None or llm is None:
+        return result
+    if int(result.state.get("visual_correction_attempts", 0) or 0) >= 1:
+        return result
+
+    from app.quality.contact_sheet import build_contact_sheet
+    from app.quality.visual_critic import critique_contact_sheet
+
+    state = dict(result.state)
+    build_sheet = contact_sheet_builder or build_contact_sheet
+    review = critic or critique_contact_sheet
+    contact_path = Path(output_dir) / "contact-sheet.jpg"
+
+    try:
+        contact_sheet = Path(build_sheet(result.long_video, contact_path))
+        critique = review(channel_id, contact_sheet, result.thumbnails, llm)
+    except Exception as exc:  # noqa: BLE001 - visual critic is advisory during supervised rollout
+        state["visual_critic_error"] = str(exc)
+        return ProductionResult(state=state, quality_report=result.quality_report)
+
+    state["contact_sheet"] = contact_sheet
+    state["visual_critic_ok"] = critique.ok
+    state["visual_issues"] = tuple(
+        {"code": issue.code, "message": issue.message} for issue in critique.issues
+    )
+    state["visual_targeted_changes"] = tuple(critique.targeted_changes)
+    state["visual_correction_requested"] = bool(
+        not critique.ok and critique.targeted_changes
+    )
+
+    if critique.ok or not critique.targeted_changes or visual_corrector is None:
+        return ProductionResult(state=state, quality_report=result.quality_report)
+
+    try:
+        correction = visual_corrector(state, critique)
+    except Exception as exc:  # noqa: BLE001 - advisory correction must not erase validated output
+        state["visual_correction_error"] = str(exc)
+        return ProductionResult(state=state, quality_report=result.quality_report)
+
+    if not correction:
+        return ProductionResult(state=state, quality_report=result.quality_report)
+
+    corrected = dict(state)
+    corrected.update(dict(correction))
+    corrected["visual_correction_attempts"] = 1
+    try:
+        for stage_name in ("render", "thumbnails", "qa"):
+            update = getattr(stages, stage_name)(corrected)
+            if update is not None:
+                corrected.update(dict(update))
+    except Exception as exc:  # noqa: BLE001 - critic cannot invalidate the previously validated output
+        state["visual_correction_attempts"] = 1
+        state["visual_correction_error"] = str(exc)
+        return ProductionResult(state=state, quality_report=result.quality_report)
+
+    corrected_report = corrected.get("quality_report")
+    if not isinstance(corrected_report, QualityReport):
+        state["visual_correction_attempts"] = 1
+        state["visual_correction_error"] = "correction QA did not return QualityReport"
+        return ProductionResult(state=state, quality_report=result.quality_report)
+    return ProductionResult(state=corrected, quality_report=corrected_report)
 
 
 def _blocked(state: ProductionState) -> bool:
@@ -388,6 +465,15 @@ def build_professional_stages(
     )
 
 
+def _visual_critic_enabled() -> bool:
+    return os.getenv("AUTOTUBE_VISUAL_CRITIC", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def produce_professional_episode(
     *,
     channel_id: str,
@@ -396,6 +482,10 @@ def produce_professional_episode(
     title: str,
     output_dir: Path,
     tts,
+    visual_llm=None,
+    visual_corrector=None,
+    contact_sheet_builder=None,
+    visual_critic=None,
     **stage_dependencies,
 ) -> ProductionResult:
     stages = build_professional_stages(
@@ -407,7 +497,7 @@ def produce_professional_episode(
         tts=tts,
         **stage_dependencies,
     )
-    return produce_episode(
+    result = produce_episode(
         {
             "channel_id": channel_id,
             "channel_cfg": channel_cfg,
@@ -416,4 +506,18 @@ def produce_professional_episode(
             "output_dir": Path(output_dir),
         },
         stages,
+    )
+    if visual_llm is None and _visual_critic_enabled():
+        from app.editorial.ollama import OllamaJsonClient
+
+        visual_llm = OllamaJsonClient()
+    return apply_visual_review(
+        result,
+        channel_id=channel_id,
+        output_dir=Path(output_dir),
+        stages=stages,
+        llm=visual_llm,
+        contact_sheet_builder=contact_sheet_builder,
+        critic=visual_critic,
+        visual_corrector=visual_corrector,
     )
