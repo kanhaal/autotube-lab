@@ -60,7 +60,7 @@ def cmd_run(args):
             refresh_live_learning(yt_client,r,cid)
             publisher=PrivateFirstPublisher(yt_client)
         publish_at=datetime.now(timezone.utc)+timedelta(hours=2) if args.live else None
-        results.append(run_channel(cid,r,max(0,day),out,dry_run=not args.live,tts=tts,publisher=publisher,publish_at=publish_at))
+        results.append(run_channel(cid,r,max(0,day),out,dry_run=not args.live,tts=tts,publisher=publisher,publish_at=publish_at,renderer=args.renderer))
     print(json.dumps(results,indent=2,default=str))
 
 def cmd_weights(args):
@@ -85,7 +85,7 @@ def main():
     sub=p.add_subparsers(dest='cmd',required=True)
     x=sub.add_parser('init');x.set_defaults(func=cmd_init)
     x=sub.add_parser('youtube-auth');x.add_argument('channel',choices=['kernelrush','lobbysignal']);x.add_argument('--client-secrets',default=os.getenv('AUTOTUBE_CLIENT_SECRETS','client_secret.json'));x.set_defaults(func=cmd_auth)
-    x=sub.add_parser('run-daily');x.add_argument('--channel',default='all',choices=['all','kernelrush','lobbysignal']);x.add_argument('--output',default=os.getenv('AUTOTUBE_OUTPUT','output'));x.add_argument('--render',action='store_true');x.add_argument('--live',action='store_true');x.add_argument('--client-secrets',default=os.getenv('AUTOTUBE_CLIENT_SECRETS','client_secret.json'));x.set_defaults(func=cmd_run)
+    x=sub.add_parser('run-daily');x.add_argument('--channel',default='all',choices=['all','kernelrush','lobbysignal']);x.add_argument('--output',default=os.getenv('AUTOTUBE_OUTPUT','output'));x.add_argument('--render',action='store_true');x.add_argument('--live',action='store_true');x.add_argument('--renderer',default=os.getenv('AUTOTUBE_RENDERER','legacy'),choices=['legacy','professional']);x.add_argument('--client-secrets',default=os.getenv('AUTOTUBE_CLIENT_SECRETS','client_secret.json'));x.set_defaults(func=cmd_run)
     x=sub.add_parser('refresh-weights');x.add_argument('channel',choices=['kernelrush','lobbysignal']);x.set_defaults(func=cmd_weights)
     x=sub.add_parser('refresh-youtube-analytics');x.add_argument('channel',choices=['kernelrush','lobbysignal']);x.add_argument('--client-secrets',default=os.getenv('AUTOTUBE_CLIENT_SECRETS','client_secret.json'));x.set_defaults(func=cmd_youtube_analytics)
     x=sub.add_parser('health');x.set_defaults(func=cmd_health)
