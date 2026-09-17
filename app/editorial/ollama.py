@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import urllib.request
+from pathlib import Path
 
 
 class OllamaJsonError(RuntimeError):
@@ -20,22 +22,26 @@ class OllamaJsonClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    def _call(self, prompt: str) -> str:
-        body = json.dumps(
-            {
-                "model": self.model,
-                "stream": False,
-                "prompt": prompt,
-            }
-        ).encode()
+    def _call(self, prompt: str, image_paths: tuple[Path, ...] = ()) -> str:
+        payload = {
+            "model": self.model,
+            "stream": False,
+            "prompt": prompt,
+        }
+        if image_paths:
+            payload["images"] = [
+                base64.b64encode(Path(path).read_bytes()).decode("ascii")
+                for path in image_paths
+            ]
+        body = json.dumps(payload).encode()
         request = urllib.request.Request(
             self.base_url + "/api/generate",
             data=body,
             headers={"Content-Type": "application/json"},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
-            payload = json.loads(response.read())
-        return payload["response"].strip()
+            result = json.loads(response.read())
+        return result["response"].strip()
 
     def generate_json(
         self,
@@ -43,11 +49,14 @@ class OllamaJsonClient:
         payload: dict,
         *,
         repair_prompt: str | None = None,
+        image_paths: tuple[Path, ...] | list[Path] = (),
     ) -> dict:
+        images = tuple(Path(path) for path in image_paths)
         raw = self._call(
             system_prompt
             + "\n\nINPUT JSON:\n"
-            + json.dumps(payload, ensure_ascii=False)
+            + json.dumps(payload, ensure_ascii=False),
+            images,
         )
         try:
             result = json.loads(raw)
@@ -55,7 +64,10 @@ class OllamaJsonClient:
             if repair_prompt is None:
                 raise OllamaJsonError(str(first_error)) from first_error
 
-            repaired = self._call(repair_prompt + "\n\nBROKEN OUTPUT:\n" + raw)
+            repaired = self._call(
+                repair_prompt + "\n\nBROKEN OUTPUT:\n" + raw,
+                images,
+            )
             try:
                 result = json.loads(repaired)
             except json.JSONDecodeError as second_error:

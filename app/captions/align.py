@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -22,15 +23,18 @@ def _similarity(expected: str, actual: str) -> float:
 class FasterWhisperTranscriber:
     def __init__(
         self,
-        model_size: str = "small.en",
+        model_size: str | None = None,
         *,
-        device: str = "cuda",
-        compute_type: str = "float16",
+        device: str | None = None,
+        compute_type: str | None = None,
         model=None,
     ):
-        self.model_size = model_size
-        self.device = device
-        self.compute_type = compute_type
+        self.model_size = model_size or os.getenv("AUTOTUBE_CAPTION_MODEL", "small.en")
+        self.device = device or os.getenv("AUTOTUBE_CAPTION_DEVICE", "cuda")
+        self.compute_type = compute_type or os.getenv(
+            "AUTOTUBE_CAPTION_COMPUTE_TYPE",
+            "float16",
+        )
         self._model = model
 
     def _load_model(self):

@@ -33,6 +33,68 @@ def build_job_key(channel_id, run_date, dry_run=True, has_tts=False, has_publish
     return f"{run_date.isoformat()}:{channel_id}:{mode}"
 
 
+def _source_description(summary: str, packet: dict) -> str:
+    lines = []
+    seen = set()
+    for source in packet.get("sources", []):
+        url = str(source.get("url", "")).strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        name = str(source.get("source_name", "")).strip()
+        lines.append(f"- {name}: {url}" if name else f"- {url}")
+    if not lines:
+        return summary
+    return summary.rstrip() + "\n\nSources:\n" + "\n".join(lines)
+
+
+def _finish_blocked_production(repo, job_key, channel_id, niche, production):
+    issues = [
+        {"code": issue.code, "message": issue.message, "fatal": issue.fatal}
+        for issue in production.quality_report.issues
+    ]
+    fact_failed = any(issue["code"] == "fact_gate_failed" for issue in issues)
+    status = "blocked_factcheck" if fact_failed else "blocked_quality"
+    repo.finish_job(job_key, status, json.dumps(issues))
+    return {
+        "status": status,
+        "channel": channel_id,
+        "niche": niche,
+        "quality_issues": issues,
+    }
+
+
+def _professional_result(episode, channel_id, niche, title, directory, production):
+    state = production.state
+    thumbs = list(production.thumbnails)
+    if production.long_video is None or not thumbs:
+        raise RuntimeError("publishable professional production is missing video or thumbnail")
+    result = {
+        "status": "generated",
+        "episode": episode,
+        "channel": channel_id,
+        "niche": niche,
+        "title": title,
+        "script": str(directory / "script.txt"),
+        "thumbnail": str(thumbs[0]),
+        "renderer": "professional",
+        "video": str(production.long_video),
+        "quality_ok": production.quality_report.ok,
+    }
+    if state.get("editorial_bundle") is not None:
+        result["editorial"] = str(directory / "editorial.json")
+        result["scenes"] = str(directory / "scenes.json")
+    if state.get("asset_manifest") is not None:
+        result["asset_manifest"] = str(directory / "asset-manifest.json")
+    if state.get("audio") is not None:
+        result["audio"] = str(state["audio"])
+    if production.short_video is not None:
+        result["short_video"] = str(production.short_video)
+    if state.get("short_error"):
+        result["short_error"] = str(state["short_error"])
+    return result, production.long_video, thumbs
+
+
 def run_channel(
     channel_id: str,
     repo,
@@ -76,26 +138,6 @@ def run_channel(
             repo.finish_job(job_key, "blocked_factcheck")
             return {"status": "blocked_factcheck", "reason": "insufficient corroboration"}
 
-        editorial_bundle = None
-        scene_plan = None
-        if script_engine is not None:
-            try:
-                script = script_engine.generate(packet)
-            except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
-                if not dry_run:
-                    raise
-                script = TemplateScriptEngine().generate(packet)
-        else:
-            from app.orchestration.editorial import prepare_editorial
-
-            editorial_bundle, scene_plan = prepare_editorial(packet, channel_id, editorial_llm)
-            script = editorial_bundle.script
-
-        check = validate_script(script, packet)
-        if not check.ok:
-            repo.finish_job(job_key, "blocked_factcheck", json.dumps(check.reasons))
-            return {"status": "blocked_factcheck", "reason": check.reasons}
-
         episode = f"{today.isoformat()}-{channel_id}-{niche}"
         directory = Path(output_dir) / episode
         directory.mkdir(parents=True, exist_ok=True)
@@ -103,117 +145,150 @@ def run_channel(
             json.dumps(packet, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        (directory / "script.txt").write_text(script, encoding="utf-8")
-
-        asset_manifest = None
-        if editorial_bundle is not None and scene_plan is not None:
-            (directory / "editorial.json").write_text(
-                json.dumps(asdict(editorial_bundle), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            (directory / "scenes.json").write_text(
-                json.dumps(asdict(scene_plan), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            from app.orchestration.editorial import prepare_episode_assets
-
-            asset_manifest = prepare_episode_assets(
-                scene_plan,
-                packet,
-                cfg,
-                directory,
-                asset_capturer,
-            )
-
-        if mode == "professional" and scene_plan is not None and asset_manifest is not None:
-            from app.visuals.thumbnail_v2 import render_thumbnail_variants
-
-            thumbs = list(
-                render_thumbnail_variants(
-                    cfg,
-                    candidate.title,
-                    scene_plan,
-                    asset_manifest,
-                    directory / "thumbnails",
-                    count=5,
-                )
-            )
-        else:
-            thumbs = [
-                render_thumbnail(
-                    cfg["name"],
-                    candidate.title,
-                    directory / f"thumbnail-{index}.png",
-                    cfg["brand"],
-                )
-                for index in range(1, 4)
-            ]
-
-        result = {
-            "status": "generated",
-            "episode": episode,
-            "channel": channel_id,
-            "niche": niche,
-            "title": candidate.title,
-            "script": str(directory / "script.txt"),
-            "thumbnail": str(thumbs[0]),
-        }
-        if editorial_bundle is not None:
-            result["editorial"] = str(directory / "editorial.json")
-            result["scenes"] = str(directory / "scenes.json")
-        if asset_manifest is not None:
-            result["asset_manifest"] = str(directory / "asset-manifest.json")
 
         video = None
-        if tts and mode == "professional":
-            if scene_plan is None or asset_manifest is None:
-                raise RuntimeError(
-                    "professional renderer requires the editorial scene plan and asset manifest"
-                )
-            from app.rendering.pipeline import render_professional_episode
+        thumbs = []
+        result = None
 
-            outputs = render_professional_episode(
+        if tts and mode == "professional" and script_engine is None:
+            from app.orchestration.production import produce_professional_episode
+
+            production = produce_professional_episode(
+                channel_id=channel_id,
                 channel_cfg=cfg,
-                title=candidate.title,
-                script=script,
-                scene_plan=scene_plan,
                 packet=packet,
-                asset_manifest=asset_manifest,
+                title=candidate.title,
+                output_dir=directory,
                 tts=tts,
-                out_dir=directory,
-                llm=editorial_llm,
+                editorial_llm=editorial_llm,
+                asset_capturer=asset_capturer,
             )
-            video = outputs.long_video
-            thumbs = list(outputs.thumbnails)
-            result["renderer"] = "professional"
-            result["video"] = str(video)
-            result["thumbnail"] = str(thumbs[0])
-            if outputs.audio is not None:
-                result["audio"] = str(outputs.audio)
-            if outputs.short_video is not None:
-                result["short_video"] = str(outputs.short_video)
-            if outputs.short_error:
-                result["short_error"] = outputs.short_error
-        elif tts:
-            wav = tts.synthesize(script, directory / "narration.wav")
-            result["audio"] = str(wav)
-            from app.rendering.episode import render_episode
-
-            video = render_episode(
-                cfg["name"],
+            if not production.publishable:
+                return _finish_blocked_production(
+                    repo,
+                    job_key,
+                    channel_id,
+                    niche,
+                    production,
+                )
+            result, video, thumbs = _professional_result(
+                episode,
+                channel_id,
+                niche,
                 candidate.title,
-                script,
-                wav,
-                directory / "video.mp4",
-                cfg["brand"],
+                directory,
+                production,
             )
-            result["video"] = str(video)
+        else:
+            editorial_bundle = None
+            scene_plan = None
+            if script_engine is not None:
+                try:
+                    script = script_engine.generate(packet)
+                except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
+                    if not dry_run:
+                        raise
+                    script = TemplateScriptEngine().generate(packet)
+            else:
+                from app.orchestration.editorial import prepare_editorial
+
+                editorial_bundle, scene_plan = prepare_editorial(packet, channel_id, editorial_llm)
+                script = editorial_bundle.script
+
+            check = validate_script(script, packet)
+            if not check.ok:
+                repo.finish_job(job_key, "blocked_factcheck", json.dumps(check.reasons))
+                return {"status": "blocked_factcheck", "reason": check.reasons}
+
+            (directory / "script.txt").write_text(script, encoding="utf-8")
+            asset_manifest = None
+            if editorial_bundle is not None and scene_plan is not None:
+                (directory / "editorial.json").write_text(
+                    json.dumps(asdict(editorial_bundle), ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                (directory / "scenes.json").write_text(
+                    json.dumps(asdict(scene_plan), ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                from app.orchestration.editorial import prepare_episode_assets
+
+                asset_manifest = prepare_episode_assets(
+                    scene_plan,
+                    packet,
+                    cfg,
+                    directory,
+                    asset_capturer,
+                )
+
+            if mode == "professional" and scene_plan is not None and asset_manifest is not None:
+                from app.visuals.thumbnail_v2 import render_thumbnail_variants
+
+                thumbs = list(
+                    render_thumbnail_variants(
+                        cfg,
+                        candidate.title,
+                        scene_plan,
+                        asset_manifest,
+                        directory / "thumbnails",
+                        count=5,
+                    )
+                )
+            else:
+                thumbs = [
+                    render_thumbnail(
+                        cfg["name"],
+                        candidate.title,
+                        directory / f"thumbnail-{index}.png",
+                        cfg["brand"],
+                    )
+                    for index in range(1, 4)
+                ]
+
+            result = {
+                "status": "generated",
+                "episode": episode,
+                "channel": channel_id,
+                "niche": niche,
+                "title": candidate.title,
+                "script": str(directory / "script.txt"),
+                "thumbnail": str(thumbs[0]),
+            }
+            if editorial_bundle is not None:
+                result["editorial"] = str(directory / "editorial.json")
+                result["scenes"] = str(directory / "scenes.json")
+            if asset_manifest is not None:
+                result["asset_manifest"] = str(directory / "asset-manifest.json")
+
+            if tts:
+                wav = tts.synthesize(script, directory / "narration.wav")
+                result["audio"] = str(wav)
+                from app.rendering.episode import render_episode
+
+                video = render_episode(
+                    cfg["name"],
+                    candidate.title,
+                    script,
+                    wav,
+                    directory / "video.mp4",
+                    cfg["brand"],
+                )
+                result["video"] = str(video)
 
         if video is not None and publisher and not dry_run:
+            if mode == "professional" and not repo.renderer_approved("professional"):
+                result["status"] = "blocked_publish"
+                result["publish_blocked"] = "renderer_unapproved"
+                repo.finish_job(
+                    job_key,
+                    "blocked_publish",
+                    json.dumps({"reason": "renderer_unapproved"}),
+                )
+                return result
+
             meta = {
                 "title": candidate.title,
-                "description": candidate.summary
-                + "\n\nSources are listed in the research packet used by AutoTube Lab.",
+                "description": _source_description(candidate.summary, packet),
                 "tags": cfg["niches"],
             }
             if publish_at:
