@@ -21,6 +21,8 @@ def test_windows_setup_checks_local_media_dependencies_without_downloading_model
     for dependency in ("python", "ffmpeg", "ffprobe", "ollama", "node", "npm"):
         assert dependency in text
     assert "npm ci" in text
+    assert "test-path \"package-lock.json\"" in text
+    assert "npm install" in text
     assert "& ollama pull" not in text
     assert "ollama pull qwen3.5:9b" in text
 
