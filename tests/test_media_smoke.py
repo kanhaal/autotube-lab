@@ -16,13 +16,13 @@ def test_media_smoke_reports_lightweight_dependency_state(monkeypatch):
 
     def fake_run(command, **kwargs):
         joined = " ".join(command)
-        if command[:2] == ["ollama", "list"]:
+        if command[:2] == ["/bin/ollama", "list"]:
             return SimpleNamespace(returncode=0, stdout="qwen3.5:9b 123 MB\n", stderr="")
-        if command[0] in {"node", "npm"}:
+        if command[0] in {"/bin/node", "/bin/npm"} and "list" not in command:
             return SimpleNamespace(returncode=0, stdout="v22.0.0\n", stderr="")
         if "-encoders" in command:
             return SimpleNamespace(returncode=0, stdout="V..... h264_nvenc NVIDIA NVENC\n", stderr="")
-        if "npm" in command and "list" in command:
+        if command[0] == "/bin/npm" and "list" in command:
             return SimpleNamespace(returncode=0, stdout="@remotion/cli@4\n", stderr="")
         raise AssertionError(joined)
 
@@ -41,6 +41,68 @@ def test_media_smoke_reports_lightweight_dependency_state(monkeypatch):
     assert result["kokoro"]["ok"] is True
     assert result["faster_whisper"]["ok"] is True
     assert result["tiny_render"]["ok"] is None
+
+
+def test_media_smoke_uses_resolved_windows_command_shims(monkeypatch):
+    from app.health import media
+
+    resolved = {
+        "node": r"C:\Program Files\nodejs\node.exe",
+        "npm": r"C:\Program Files\nodejs\npm.cmd",
+        "npx": r"C:\Program Files\nodejs\npx.cmd",
+        "ffmpeg": r"C:\ffmpeg\bin\ffmpeg.exe",
+        "ffprobe": r"C:\ffmpeg\bin\ffprobe.exe",
+        "ollama": r"C:\Program Files\Ollama\ollama.exe",
+    }
+    monkeypatch.setattr(media.shutil, "which", lambda name: resolved.get(name))
+    monkeypatch.setattr(media.importlib.util, "find_spec", lambda name: None)
+
+    commands = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        if command[0] == resolved["ollama"]:
+            return SimpleNamespace(returncode=0, stdout="qwen3.5:9b 6.6 GB\n", stderr="")
+        if command[0] in {resolved["node"], resolved["npm"]}:
+            return SimpleNamespace(returncode=0, stdout="v24.0.0\n", stderr="")
+        if command[0] == resolved["ffmpeg"]:
+            return SimpleNamespace(returncode=0, stdout="V..... h264_nvenc\n", stderr="")
+        raise AssertionError(command)
+
+    monkeypatch.setattr(media.subprocess, "run", fake_run)
+
+    result = media.run_media_smoke(deep=False)
+
+    assert result["npm"]["ok"] is True
+    assert result["remotion"]["ok"] is True
+    assert any(command[0] == resolved["npm"] for command in commands)
+
+
+def test_tiny_render_uses_resolved_windows_npx_shim(monkeypatch):
+    from pathlib import Path
+
+    from app.health import media
+
+    resolved = {
+        "node": r"C:\Program Files\nodejs\node.exe",
+        "npm": r"C:\Program Files\nodejs\npm.cmd",
+        "npx": r"C:\Program Files\nodejs\npx.cmd",
+    }
+    monkeypatch.setattr(media.shutil, "which", lambda name: resolved.get(name))
+
+    commands = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        Path(command[5]).write_bytes(b"video")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(media.subprocess, "run", fake_run)
+
+    result = media._tiny_render()
+
+    assert result["ok"] is True
+    assert commands[0][0] == resolved["npx"]
 
 
 def test_media_smoke_missing_tools_are_reported_not_raised(monkeypatch):
