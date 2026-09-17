@@ -14,6 +14,22 @@ def refresh_live_learning(client,repo,channel_id):
     cfg=channel_config(channel_id)
     return refresh_channel_analytics(client,repo,channel_id,cfg['niches'])
 
+def _build_channel_tts(cfg):
+    from app.narration.backend import ConfiguredTTS, select_tts_backend
+    from app.narration.fallback import FallbackTTS
+
+    voice=cfg.get('voice',{})
+    profile=voice.get('profile','default')
+    primary=select_tts_backend(
+        voice.get('backend','chatterbox'),
+        voice_profiles={profile:voice.get('settings',{})},
+    )
+    fallback=select_tts_backend(
+        voice.get('fallback_backend','kokoro'),
+        voice_profiles={profile:voice.get('fallback_settings',{})},
+    )
+    return ConfiguredTTS(FallbackTTS(primary,fallback),profile)
+
 def cmd_init(args):
     r=_repo(args); print(json.dumps({'ok':True,'db':str(r.path),'channels':[c['name'] for c in all_channels()]},indent=2))
 
@@ -33,9 +49,9 @@ def cmd_run(args):
     results=[]
     for cid in ([args.channel] if args.channel!='all' else ['kernelrush','lobbysignal']):
         tts=publisher=None
+        cfg=channel_config(cid)
         if args.render or args.live:
-            from app.narration.tts import WindowsSapiTTS
-            tts=WindowsSapiTTS()
+            tts=_build_channel_tts(cfg)
         if args.live:
             from app.publishing.google_client import authorize,GoogleYouTubeClient
             from app.publishing.youtube import PrivateFirstPublisher
@@ -59,8 +75,10 @@ def cmd_youtube_analytics(args):
 
 def cmd_health(args):
     import shutil
+    from app.narration.health import media_health
+
     r=_repo(args)
-    print(json.dumps({'db':str(r.path),'ffmpeg':bool(shutil.which('ffmpeg')),'ffprobe':bool(shutil.which('ffprobe')),'weights':{c['id']:r.get_weights(c['id']) for c in all_channels()},'oauth':{c['id']:(Path('data/oauth')/f"{c['id']}.json").exists() for c in all_channels()}},indent=2))
+    print(json.dumps({'db':str(r.path),'ffmpeg':bool(shutil.which('ffmpeg')),'ffprobe':bool(shutil.which('ffprobe')),'media':media_health(),'weights':{c['id']:r.get_weights(c['id']) for c in all_channels()},'oauth':{c['id']:(Path('data/oauth')/f"{c['id']}.json").exists() for c in all_channels()}},indent=2))
 
 def main():
     p=argparse.ArgumentParser(prog='autotube');p.add_argument('--db',default=os.getenv('AUTOTUBE_DB','data/autotube.db'))
