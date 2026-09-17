@@ -10,7 +10,7 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
   const windows = sceneFrameWindows(pkg);
   return (
     <AbsoluteFill style={{background: theme.background, color: theme.foreground, fontFamily: 'Inter, Arial, sans-serif'}}>
-      <Audio src={staticFile(pkg.manifest.audio_path)} />
+      {pkg.manifest.audio_path ? <Audio src={staticFile(pkg.manifest.audio_path)} /> : null}
       {pkg.scenes.scenes.map((scene, index) => {
         const window = windows[index];
         if (!window) return null;
