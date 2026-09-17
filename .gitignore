@@ -9,6 +9,9 @@ data/*.sqlite*
 data/oauth/
 output/*
 !output/.gitkeep
+video/node_modules/
+video/dist/
+video/.remotion/
 *.mp4
 *.wav
 *.srt
