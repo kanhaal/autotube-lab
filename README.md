@@ -7,6 +7,8 @@ AutoTube Lab is a local-first, fail-closed YouTube production engine for two fac
 
 The first 45 days rotate niches evenly. After videos mature for 7 days, the experiment engine can reallocate future uploads using mature analytics while preserving exploration floors.
 
+For the complete start-to-live Windows procedure, use **[`docs/windows-runbook.md`](docs/windows-runbook.md)**.
+
 ## Safety and quality philosophy
 
 A missed upload is better than a fabricated one. The production path builds multi-source research packets, applies the verified-fact gate, captures source-page visuals with Playwright, renders original graphics, runs deterministic media QA, and keeps YouTube publishing private-first. Failed hard QA never reaches the publisher.
@@ -26,14 +28,14 @@ The professional renderer is **not automatically approved** by tests, CI, a succ
 
 ## Windows setup
 
-Requirements: Python 3.11+, FFmpeg + FFprobe, Ollama, Node.js 22 + npm, and a Google Cloud OAuth Desktop client with **YouTube Data API v3** + **YouTube Analytics API** enabled.
+Render-only requirements: Python 3.11+, FFmpeg + FFprobe, Ollama, and Node.js 22 + npm. A Google Cloud OAuth Desktop client with **YouTube Data API v3** + **YouTube Analytics API** is only required later for YouTube authorization/live publishing.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup_windows.ps1
 ollama pull qwen3.5:9b
 ```
 
-`setup_windows.ps1` installs the Python/Node project dependencies and Playwright Chromium, but deliberately does **not** download large model weights. The default local writing model is `qwen3.5:9b`; override it with `AUTOTUBE_LLM_MODEL` if needed.
+`setup_windows.ps1` installs the Python/Node project dependencies and Playwright Chromium, but deliberately does **not** download all large model weights. The default local writing model is `qwen3.5:9b`; override it with `AUTOTUBE_LLM_MODEL` if needed. Chatterbox/faster-whisper may download/cache model data when first loaded locally.
 
 Useful media configuration defaults are documented in `.env.example`:
 
@@ -48,13 +50,17 @@ AUTOTUBE_AUDIO_LIBRARY=config/audio/library.yml
 AUTOTUBE_VISUAL_CRITIC=0
 ```
 
+`.env.example` is documentation only; AutoTube does **not** automatically load it. Set environment variables in PowerShell (for example `$env:AUTOTUBE_CAPTION_DEVICE="cuda"`) or use explicit CLI flags where available. The full recommended PowerShell block is in the Windows runbook.
+
 `AUTOTUBE_VISUAL_CRITIC=0` keeps the optional local visual critic disabled by default. Set it to `1` only when you want the post-QA contact-sheet/thumbnail review; deterministic QA remains authoritative either way.
 
-Put the OAuth Desktop client JSON at `client_secret.json`. It is gitignored.
+The local audio library is optional. Copy `config/audio/library.example.yml` to `config/audio/library.yml` and replace the example entries with owned/properly licensed local WAV files if you want music/SFX selection. Missing/nonexistent library assets safely fall back to narration-only audio.
+
+Put the OAuth Desktop client JSON at `client_secret.json` only when you are ready for the publishing stage. It is gitignored.
 
 ### Google OAuth status matters
 
-During initial testing, add your Google account as a test user if the OAuth app is External + Testing. For long-running personal use, ensure the OAuth configuration is suitable for persistent authorization before relying on scheduled uploads. OAuth publishing/verification is separate from the YouTube Data API upload audit.
+During initial publishing tests, add your Google account as a test user if the OAuth app is External + Testing. For long-running personal use, ensure the OAuth configuration is suitable for persistent authorization before relying on scheduled uploads. OAuth publishing/verification is separate from the YouTube Data API upload audit.
 
 Authorize each YouTube channel independently:
 
@@ -81,7 +87,7 @@ After local model dependencies are installed, run the sequential deep smoke:
 .\.venv\Scripts\autotube.exe media-smoke --deep
 ```
 
-The deep path may load the local Chatterbox model and performs a fixed tiny Remotion render. It uses a local fixture, not live sources.
+The deep path loads/releases Chatterbox, then loads/releases faster-whisper, then performs a fixed tiny Remotion render. This sequencing reduces overlapping VRAM pressure on 6 GB-class GPUs. It uses local test media, not live sources.
 
 ## Supervised professional-renderer rollout
 
@@ -90,6 +96,7 @@ Do not jump from green CI directly to unattended publishing. Use these stages in
 ### Stage A — installation and deterministic checks
 
 ```powershell
+.\.venv\Scripts\autotube.exe health
 .\.venv\Scripts\autotube.exe media-smoke
 .\.venv\Scripts\autotube.exe media-smoke --deep
 .\.venv\Scripts\autotube.exe renderer-status
@@ -105,7 +112,7 @@ Render both fixed, non-current, local-only sample stories:
 powershell -ExecutionPolicy Bypass -File scripts/render_samples.ps1
 ```
 
-Manually review `output/samples/kernelrush/` and `output/samples/lobbysignal/`, including long-form video, native 9:16 Short, source/fallback visuals, captions, audio, transitions, and all thumbnail variants. Do not approve the renderer if the output is not acceptable.
+The sample script uses the project `.venv` directly and sequences TTS and faster-whisper rather than keeping both heavy model stacks resident together. Manually review `output/samples/kernelrush/` and `output/samples/lobbysignal/`, including long-form video, native 9:16 Short, distinct long/Short narration, source/fallback visuals, captions, audio, transitions, and all thumbnail variants. Do not approve the renderer if the output is not acceptable.
 
 ### Stage C — explicit renderer approval
 
@@ -133,10 +140,10 @@ Review the real source screenshots, claims, timing, captions, audio, thumbnails,
 
 Run and inspect **3–7 supervised daily renders** before considering unattended live publishing. Keep the scheduled task render-only throughout this period.
 
-The supplied scheduler remains:
+The supplied scheduler explicitly runs:
 
 ```text
-run-daily --render
+run-daily --render --renderer professional
 ```
 
 It never auto-switches to `--live`. Changing that is a separate manual rollout decision after the supervised period.
@@ -147,9 +154,11 @@ Professional production is staged as:
 
 `editorial → assets → narration → captions → audio → render → thumbnails → QA`
 
+Heavy local model ownership is released between stages where AutoTube owns the model instance: the internally created Ollama editorial model is unloaded before narration, TTS backends are released before faster-whisper, and faster-whisper is released before media rendering.
+
 The hard QA gate checks media existence, dimensions, codecs/audio presence, duration consistency, minimum file size, caption artifacts, thumbnails, fact-gate state, and Short duration. Hard failures block publishing.
 
-A contact sheet and optional local Qwen visual critic can flag clutter, hierarchy, repetition, branding, and thumbnail-legibility problems. This critic is advisory: it cannot override deterministic failures, and orchestration permits at most one targeted correction/rerender pass.
+A contact sheet and optional local Qwen visual critic can flag clutter, hierarchy, repetition, branding, and thumbnail-legibility problems. This critic is advisory: it cannot override deterministic failures. Orchestration supports at most one targeted correction/rerender pass when a caller explicitly supplies a visual corrector; the normal CLI path does not silently auto-correct episodes.
 
 ## Publishing safety
 
@@ -172,7 +181,7 @@ Install the render-only Windows task with:
 powershell -ExecutionPolicy Bypass -File scripts/install_task.ps1
 ```
 
-It runs at 18:00 with `StartWhenAvailable` and intentionally uses `run-daily --render`. Do not convert it to unattended `--live` until the supervised rollout above has been completed and the real outputs have been manually accepted.
+It runs at 18:00 with `StartWhenAvailable` and intentionally uses `run-daily --render --renderer professional`. Do not convert it to unattended `--live` until the supervised rollout above has been completed and the real outputs have been manually accepted.
 
 ## Experiment
 
