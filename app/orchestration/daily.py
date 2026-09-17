@@ -45,7 +45,11 @@ def run_channel(
     tts=None,
     publisher=None,
     publish_at=None,
+    renderer=None,
 ):
+    from app.rendering.pipeline import renderer_mode
+
+    mode = renderer_mode(renderer)
     cfg = channel_config(channel_id)
     weights = repo.get_weights(channel_id)
     niche = choose_niche(cfg["niches"], day_index, 45, weights or None)
@@ -121,15 +125,30 @@ def run_channel(
                 asset_capturer,
             )
 
-        thumbs = [
-            render_thumbnail(
-                cfg["name"],
-                candidate.title,
-                directory / f"thumbnail-{index}.png",
-                cfg["brand"],
+        if mode == "professional" and scene_plan is not None and asset_manifest is not None:
+            from app.visuals.thumbnail_v2 import render_thumbnail_variants
+
+            thumbs = list(
+                render_thumbnail_variants(
+                    cfg,
+                    candidate.title,
+                    scene_plan,
+                    asset_manifest,
+                    directory / "thumbnails",
+                    count=5,
+                )
             )
-            for index in range(1, 4)
-        ]
+        else:
+            thumbs = [
+                render_thumbnail(
+                    cfg["name"],
+                    candidate.title,
+                    directory / f"thumbnail-{index}.png",
+                    cfg["brand"],
+                )
+                for index in range(1, 4)
+            ]
+
         result = {
             "status": "generated",
             "episode": episode,
@@ -145,7 +164,37 @@ def run_channel(
         if asset_manifest is not None:
             result["asset_manifest"] = str(directory / "asset-manifest.json")
 
-        if tts:
+        video = None
+        if tts and mode == "professional":
+            if scene_plan is None or asset_manifest is None:
+                raise RuntimeError(
+                    "professional renderer requires the editorial scene plan and asset manifest"
+                )
+            from app.rendering.pipeline import render_professional_episode
+
+            outputs = render_professional_episode(
+                channel_cfg=cfg,
+                title=candidate.title,
+                script=script,
+                scene_plan=scene_plan,
+                packet=packet,
+                asset_manifest=asset_manifest,
+                tts=tts,
+                out_dir=directory,
+                llm=editorial_llm,
+            )
+            video = outputs.long_video
+            thumbs = list(outputs.thumbnails)
+            result["renderer"] = "professional"
+            result["video"] = str(video)
+            result["thumbnail"] = str(thumbs[0])
+            if outputs.audio is not None:
+                result["audio"] = str(outputs.audio)
+            if outputs.short_video is not None:
+                result["short_video"] = str(outputs.short_video)
+            if outputs.short_error:
+                result["short_error"] = outputs.short_error
+        elif tts:
             wav = tts.synthesize(script, directory / "narration.wav")
             result["audio"] = str(wav)
             from app.rendering.episode import render_episode
@@ -159,29 +208,28 @@ def run_channel(
                 cfg["brand"],
             )
             result["video"] = str(video)
-            if publisher and not dry_run:
-                meta = {
-                    "title": candidate.title,
-                    "description": candidate.summary
-                    + "\n\nSources are listed in the research packet used by AutoTube Lab.",
-                    "tags": cfg["niches"],
-                }
-                if publish_at:
-                    staged = publisher.stage_and_schedule(video, thumbs[0], meta, publish_at)
-                else:
-                    staged = publisher.stage(video, thumbs[0], meta)
-                result["youtube_video_id"] = staged.video_id
-                result["youtube_status"] = staged.status
-                pub_status = (
-                    "scheduled" if (staged.status == "succeeded" and publish_at) else "private"
-                )
-                record_publication(
-                    repo,
-                    episode,
-                    channel_id,
-                    staged.video_id,
-                    pub_status,
-                )
+
+        if video is not None and publisher and not dry_run:
+            meta = {
+                "title": candidate.title,
+                "description": candidate.summary
+                + "\n\nSources are listed in the research packet used by AutoTube Lab.",
+                "tags": cfg["niches"],
+            }
+            if publish_at:
+                staged = publisher.stage_and_schedule(video, thumbs[0], meta, publish_at)
+            else:
+                staged = publisher.stage(video, thumbs[0], meta)
+            result["youtube_video_id"] = staged.video_id
+            result["youtube_status"] = staged.status
+            pub_status = "scheduled" if (staged.status == "succeeded" and publish_at) else "private"
+            record_publication(
+                repo,
+                episode,
+                channel_id,
+                staged.video_id,
+                pub_status,
+            )
 
         repo.finish_job(
             job_key,
