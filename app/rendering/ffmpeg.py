@@ -101,8 +101,8 @@ def probe_media(path: Path) -> MediaProbe:
         height=int(video["height"]) if video.get("height") is not None else None,
         frame_rate=_frame_rate(video),
         format_duration=format_duration,
-        video_duration=_as_float(video.get("duration")) or format_duration,
-        audio_duration=_as_float(audio.get("duration")) or format_duration if audio else 0.0,
+        video_duration=(_as_float(video.get("duration")) or format_duration) if video else 0.0,
+        audio_duration=(_as_float(audio.get("duration")) or format_duration) if audio else 0.0,
         file_size=int(format_info.get("size") or target.stat().st_size),
     )
 
