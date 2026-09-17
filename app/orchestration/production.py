@@ -117,6 +117,7 @@ def build_professional_stages(
     output.mkdir(parents=True, exist_ok=True)
 
     def editorial(state: ProductionState) -> StageResult:
+        from app.editorial.ollama import OllamaJsonClient
         from app.orchestration.editorial import prepare_editorial
         from app.quality.layout import validate_scene_layout_metadata
         from app.shorts.pipeline import build_short_story
@@ -150,8 +151,9 @@ def build_professional_stages(
             return result
 
         make_short = short_builder or build_short_story
+        short_llm = editorial_llm or OllamaJsonClient()
         try:
-            short_story = make_short(channel_id, packet, script, editorial_llm)
+            short_story = make_short(channel_id, packet, script, short_llm)
         except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
             result["short_error"] = str(exc)
         else:
