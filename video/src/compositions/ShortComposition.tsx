@@ -1,5 +1,6 @@
-import {AbsoluteFill, Audio, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 
+import {scenePresentationStyle} from '../scenes/presentation';
 import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
 import type {ChannelTheme} from '../themes/types';
 import {sceneFrameWindows} from './sceneTiming';
@@ -163,8 +164,8 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
 
 const VerticalScene = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}) => {
   const frame = useCurrentFrame();
-  const opacity = interpolate(frame, [0, 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const translateY = interpolate(frame, [0, 10], [32, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const {fps} = useVideoConfig();
+  const presentation = scenePresentationStyle(scene, frame, fps);
   const headlineSize = scene.headline.length > 42 ? 66 : scene.headline.length > 25 ? 78 : 92;
 
   return (
@@ -177,7 +178,7 @@ const VerticalScene = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}
         padding: '148px 132px 400px 88px',
       }}
     >
-      <div style={{opacity, transform: `translateY(${translateY}px)`}}>
+      <div style={presentation}>
         <div
           style={{
             color: theme.accent,
