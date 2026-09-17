@@ -17,6 +17,7 @@ class AssetRequest:
     source_name: str | None
     purpose: str
     required: bool = False
+    scene_id: str | None = None
 
 
 def _source_by_url(packet: dict) -> dict[str, dict]:
@@ -75,6 +76,7 @@ def resolve_scene_assets(scene_plan: ScenePlan, packet: dict) -> tuple[AssetRequ
                 source_name=source.get("source_name"),
                 purpose=scene.purpose,
                 required=bool(scene.data.get("asset_required", False)),
+                scene_id=scene.id,
             )
         )
 
