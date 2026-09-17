@@ -1,9 +1,9 @@
 import type {RenderPackageV1} from '../types';
 import {lobbysignalTheme} from '../themes/lobbysignal';
-import {ShortComposition} from './ShortComposition';
+import {EnhancedShortComposition} from './EnhancedShortComposition';
 
 export const LOBBYSIGNAL_SHORT_THEME_ID = lobbysignalTheme.id;
 
 export const LobbySignalShort = ({pkg}: {pkg: RenderPackageV1}) => (
-  <ShortComposition pkg={pkg} theme={lobbysignalTheme} />
+  <EnhancedShortComposition pkg={pkg} theme={lobbysignalTheme} />
 );
