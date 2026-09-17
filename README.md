@@ -1,32 +1,57 @@
 # AutoTube Lab
 
-Autonomous, fail-closed YouTube production engine for two faceless channels:
+AutoTube Lab is a local-first, fail-closed YouTube production engine for two faceless channels:
 
 - **KernelRush** (`@KernelRushHQ`) — AI/software, open-source/GitHub radar, consumer tech/apps.
 - **LobbySignal** — gaming news/player trends and internet-culture explainers.
 
-The first 45 days rotate niches evenly. After videos mature for 7 days, the experiment engine reallocates future uploads using mature analytics while preserving exploration floors.
+The first 45 days rotate niches evenly. After videos mature for 7 days, the experiment engine can reallocate future uploads using mature analytics while preserving exploration floors.
 
-## Safety / quality philosophy
+## Safety and quality philosophy
 
-A missed upload is better than a fabricated one. The live pipeline builds multi-source research packets, blocks unsupported numeric claims, renders original graphics rather than harvesting copyrighted clips, uploads **private first**, waits for YouTube processing, and schedules only a successfully processed video.
+A missed upload is better than a fabricated one. The production path builds multi-source research packets, applies the verified-fact gate, captures source-page visuals with Playwright, renders original graphics, runs deterministic media QA, and keeps YouTube publishing private-first. Failed hard QA never reaches the publisher.
+
+The professional stack stays local/free where practical:
+
+- Qwen 3.5 9B through Ollama for editorial/script/scene planning
+- Chatterbox primary TTS with Kokoro fallback
+- faster-whisper word-timestamp caption alignment
+- Playwright verified-source screenshots/assets
+- Remotion + React + TypeScript renderer
+- FFmpeg/FFprobe media processing and inspection
+- optional local Qwen contact-sheet visual critique
+- legacy renderer retained as a fallback path
+
+The professional renderer is **not automatically approved** by tests, CI, a successful render, or setup. Approval is persistent and explicit.
 
 ## Windows setup
 
-Requirements: Python 3.11+, FFmpeg, Ollama, and a Google Cloud OAuth Desktop client with **YouTube Data API v3** + **YouTube Analytics API** enabled.
+Requirements: Python 3.11+, FFmpeg + FFprobe, Ollama, Node.js 22 + npm, and a Google Cloud OAuth Desktop client with **YouTube Data API v3** + **YouTube Analytics API** enabled.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup_windows.ps1
 ollama pull qwen3.5:9b
 ```
 
-`qwen3.5:9b` is the default local writing model. Override it at any time with the `AUTOTUBE_LLM_MODEL` environment variable; `qwen3:8b` is the recommended lower-VRAM fallback.
+`setup_windows.ps1` installs the Python/Node project dependencies and Playwright Chromium, but deliberately does **not** download large model weights. The default local writing model is `qwen3.5:9b`; override it with `AUTOTUBE_LLM_MODEL` if needed.
+
+Useful media configuration defaults are documented in `.env.example`:
+
+```text
+AUTOTUBE_RENDERER=professional
+AUTOTUBE_TTS_BACKEND=chatterbox
+AUTOTUBE_LLM_MODEL=qwen3.5:9b
+AUTOTUBE_CAPTION_MODEL=small.en
+AUTOTUBE_CAPTION_DEVICE=cuda
+AUTOTUBE_CAPTION_COMPUTE_TYPE=float16
+AUTOTUBE_AUDIO_LIBRARY=config/audio/library.yml
+```
 
 Put the OAuth Desktop client JSON at `client_secret.json`. It is gitignored.
 
 ### Google OAuth status matters
 
-During initial testing, add your Google account as a test user if the OAuth app is External + Testing. Google currently limits test-user authorizations (including refresh tokens for these YouTube scopes) to 7 days. For this personal-use project, move the OAuth app to **In Production** after the setup works so unattended authorization does not expire every week. OAuth publishing/verification is separate from the YouTube Data API upload audit.
+During initial testing, add your Google account as a test user if the OAuth app is External + Testing. For long-running personal use, ensure the OAuth configuration is suitable for persistent authorization before relying on scheduled uploads. OAuth publishing/verification is separate from the YouTube Data API upload audit.
 
 Authorize each YouTube channel independently:
 
@@ -35,27 +60,99 @@ Authorize each YouTube channel independently:
 .\.venv\Scripts\autotube.exe youtube-auth lobbysignal
 ```
 
-The command checks the authorized YouTube channel title. If you select the wrong channel identity, its token is deleted instead of silently publishing to the wrong account.
+The command checks the authorized YouTube channel title. If the wrong channel identity is selected, the token is deleted instead of silently publishing to the wrong account.
 
-## Test before publishing
+## Media workstation smoke test
 
-```powershell
-.\.venv\Scripts\autotube.exe run-daily
-.\.venv\Scripts\autotube.exe run-daily --render
-.\.venv\Scripts\autotube.exe health
-```
-
-Dry, render and live executions use separate daily idempotency keys, so you can safely do all three during supervised setup without duplicate runs inside the same mode.
-
-## Live mode
-
-Only after reviewing rendered output:
+Run the lightweight dependency report first:
 
 ```powershell
-.\.venv\Scripts\autotube.exe run-daily --live
+.\.venv\Scripts\autotube.exe media-smoke
 ```
 
-A live run first refreshes mature YouTube analytics and niche weights, then chooses that day's niche. It uploads the new video private, sets the thumbnail, polls YouTube processing, and schedules it only if processing succeeds.
+It reports Ollama model availability, Node/npm, Remotion, FFmpeg, FFprobe, NVENC capability, Chatterbox, Kokoro, and faster-whisper availability.
+
+After local model dependencies are installed, run the sequential deep smoke:
+
+```powershell
+.\.venv\Scripts\autotube.exe media-smoke --deep
+```
+
+The deep path may load the local Chatterbox model and performs a fixed tiny Remotion render. It uses a local fixture, not live sources.
+
+## Supervised professional-renderer rollout
+
+Do not jump from green CI directly to unattended publishing. Use these stages in order.
+
+### Stage A — installation and deterministic checks
+
+```powershell
+.\.venv\Scripts\autotube.exe media-smoke
+.\.venv\Scripts\autotube.exe media-smoke --deep
+.\.venv\Scripts\autotube.exe renderer-status
+```
+
+The expected professional renderer state is initially `approved: false`.
+
+### Stage B — synthetic sample review
+
+Render both fixed, non-current, local-only sample stories:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/render_samples.ps1
+```
+
+Manually review `output/samples/kernelrush/` and `output/samples/lobbysignal/`, including long-form video, native 9:16 Short, source/fallback visuals, captions, audio, transitions, and all thumbnail variants. Do not approve the renderer if the output is not acceptable.
+
+### Stage C — explicit renderer approval
+
+Only after Stage B is acceptable:
+
+```powershell
+.\.venv\Scripts\autotube.exe approve-renderer professional
+.\.venv\Scripts\autotube.exe renderer-status
+```
+
+Approval only unlocks the live-publish safety gate. It does not start publishing by itself.
+
+### Stage D — real render-only review
+
+Render one real KernelRush and one real LobbySignal production without upload:
+
+```powershell
+.\.venv\Scripts\autotube.exe run-daily --channel kernelrush --render --renderer professional
+.\.venv\Scripts\autotube.exe run-daily --channel lobbysignal --render --renderer professional
+```
+
+Review the real source screenshots, claims, timing, captions, audio, thumbnails, and QA artifacts manually.
+
+### Stage E — supervised daily operation
+
+Run and inspect **3–7 supervised daily renders** before considering unattended live publishing. Keep the scheduled task render-only throughout this period.
+
+The supplied scheduler remains:
+
+```text
+run-daily --render
+```
+
+It never auto-switches to `--live`. Changing that is a separate manual rollout decision after the supervised period.
+
+## Deterministic QA and visual review
+
+Professional production is staged as:
+
+`editorial → assets → narration → captions → audio → render → thumbnails → QA`
+
+The hard QA gate checks media existence, dimensions, codecs/audio presence, duration consistency, minimum file size, caption artifacts, thumbnails, fact-gate state, and Short duration. Hard failures block publishing.
+
+A contact sheet and optional local Qwen visual critic can flag clutter, hierarchy, repetition, branding, and thumbnail-legibility problems. This critic is advisory: it cannot override deterministic failures, and orchestration permits at most one targeted correction/rerender pass.
+
+## Publishing safety
+
+`run-daily --live --renderer professional` is blocked until the professional renderer has explicit persistent approval. The same approval check is enforced again at the actual publisher boundary, so callers bypassing the CLI still cannot publish unapproved professional output.
+
+For approved, QA-valid output, YouTube descriptions include the actual verified source URLs from the research packet. Publishing remains private-first: upload private, set the thumbnail, validate processing, and only then schedule when requested.
 
 You can manually refresh learning at any time:
 
@@ -64,19 +161,15 @@ You can manually refresh learning at any time:
 .\.venv\Scripts\autotube.exe refresh-youtube-analytics lobbysignal
 ```
 
-## YouTube API upload restriction
-
-YouTube currently restricts videos uploaded by unverified API projects created after July 28, 2020 to **private** until the API project passes its YouTube API Services compliance audit. This is separate from OAuth consent-screen publishing. AutoTube deliberately remains private-first either way.
-
 ## Automation
 
-After the first supervised week:
+Install the render-only Windows task with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/install_task.ps1
 ```
 
-The supplied task currently runs **`run-daily --render`**, not `--live`, at 18:00 with `StartWhenAvailable`. That is deliberate for the supervised rollout. After you trust seven days of outputs, edit the Task Scheduler action to `run-daily --live` for unattended publishing.
+It runs at 18:00 with `StartWhenAvailable` and intentionally uses `run-daily --render`. Do not convert it to unattended `--live` until the supervised rollout above has been completed and the real outputs have been manually accepted.
 
 ## Experiment
 
@@ -96,8 +189,8 @@ Videos mature for 7 days before scoring. The target weighting is:
 - 15% subscribers gained per 1,000 views
 - 10% watch time per 1,000 impressions when available
 
-The direct Analytics adapter currently collects the supported watch/view/subscriber metrics and safely renormalizes the score when reach metrics such as impressions/CTR are unavailable. Each niche retains an exploration floor and no niche can exceed 80% allocation during experimentation.
+The Analytics adapter safely renormalizes the score when reach metrics such as impressions/CTR are unavailable. Each niche retains an exploration floor and no niche can exceed 80% allocation during experimentation.
 
 ## Important
 
-This system automates production and experimentation; it does **not** guarantee views, monetization, or income. During days 1–7, inspect every rendered video before enabling unattended live publishing. YouTube monetization still depends on originality, viewer value, and current YouTube Partner Program policies.
+AutoTube Lab automates production and experimentation; it does **not** guarantee views, monetization, or income. Keep the renderer unapproved until the synthetic samples are manually reviewed, then review real KernelRush + LobbySignal renders and several supervised daily runs before enabling unattended live publishing.
