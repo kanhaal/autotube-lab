@@ -27,4 +27,4 @@ jobs:
         run: npm run typecheck
       - name: Smoke render professional composition
         working-directory: video
-        run: npx remotion render src/index.ts KernelRushLong /tmp/autotube-smoke.mp4 --props=smoke-props.json --frames=0
+        run: npx remotion render src/index.ts KernelRushLong /tmp/autotube-smoke.mp4 --props=smoke-props.json --frames=0-0
