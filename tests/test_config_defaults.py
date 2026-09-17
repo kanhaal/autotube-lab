@@ -28,10 +28,24 @@ def test_windows_setup_checks_local_media_dependencies_without_downloading_model
     assert "ollama pull qwen3.5:9b" in text
 
 
-def test_scheduled_task_remains_render_only_during_supervised_rollout():
+def test_scheduled_task_remains_professional_render_only_during_supervised_rollout():
     text = Path("scripts/install_task.ps1").read_text(encoding="utf-8")
-    assert "run-daily --render" in text
+    assert "run-daily --render --renderer professional" in text
     assert "run-daily --live" not in text
+
+
+def test_sample_render_script_uses_project_virtualenv_python():
+    text = Path("scripts/render_samples.ps1").read_text(encoding="utf-8").lower()
+    assert ".venv\\scripts\\python.exe" in text
+    assert "& $python" in text
+    assert "\n    python scripts/render_sample_story.py" not in text
+
+
+def test_sample_story_releases_tts_before_loading_whisper():
+    text = Path("scripts/render_sample_story.py").read_text(encoding="utf-8")
+    assert "tts.release()" in text
+    assert "transcriber.release()" in text
+    assert text.index("tts.release()") < text.index("transcriber = FasterWhisperTranscriber()")
 
 
 def test_caption_transcriber_defaults_can_be_overridden_by_environment(monkeypatch):
@@ -49,7 +63,6 @@ def test_caption_transcriber_defaults_can_be_overridden_by_environment(monkeypat
 
 
 def test_cli_tts_backend_can_be_overridden_by_environment(monkeypatch):
-    import app.narration.backend as backend
     from app.cli import _build_channel_tts
 
     selected = []
@@ -64,7 +77,7 @@ def test_cli_tts_backend_can_be_overridden_by_environment(monkeypatch):
         selected.append(name)
         return FakeBackend()
 
-    monkeypatch.setattr(backend, "select_tts_backend", select)
+    monkeypatch.setattr("app.narration.backend.select_tts_backend", select)
     monkeypatch.setenv("AUTOTUBE_TTS_BACKEND", "kokoro")
 
     _build_channel_tts(

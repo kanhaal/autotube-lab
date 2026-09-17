@@ -37,9 +37,15 @@ class ConfiguredTTS:
             self.backend,
             self.voice_profile,
             out.parent,
+            output_path=out,
             max_chars=self.max_chars,
         )
         return track.path
+
+    def release(self) -> None:
+        release = getattr(self.backend, "release", None)
+        if callable(release):
+            release()
 
 
 def select_tts_backend(name: str, **deps):

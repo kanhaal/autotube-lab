@@ -22,6 +22,16 @@ class OllamaJsonClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
+    def _request(self, payload: dict) -> dict:
+        body = json.dumps(payload).encode()
+        request = urllib.request.Request(
+            self.base_url + "/api/generate",
+            data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            return json.loads(response.read())
+
     def _call(self, prompt: str, image_paths: tuple[Path, ...] = ()) -> str:
         payload = {
             "model": self.model,
@@ -33,15 +43,12 @@ class OllamaJsonClient:
                 base64.b64encode(Path(path).read_bytes()).decode("ascii")
                 for path in image_paths
             ]
-        body = json.dumps(payload).encode()
-        request = urllib.request.Request(
-            self.base_url + "/api/generate",
-            data=body,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
-            result = json.loads(response.read())
-        return result["response"].strip()
+        return self._request(payload)["response"].strip()
+
+    def unload(self) -> None:
+        """Release this Ollama model from memory immediately."""
+
+        self._request({"model": self.model, "keep_alive": 0})
 
     def generate_json(
         self,

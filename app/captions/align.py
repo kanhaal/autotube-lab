@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import os
 import re
 from difflib import SequenceMatcher
@@ -55,6 +56,10 @@ class FasterWhisperTranscriber:
             vad_filter=True,
             condition_on_previous_text=False,
         )
+
+    def release(self) -> None:
+        self._model = None
+        gc.collect()
 
 
 def _to_cues(words) -> tuple[CaptionCue, ...]:

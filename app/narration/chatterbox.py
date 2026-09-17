@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 
 
@@ -54,3 +55,13 @@ class ChatterboxTTS:
         writer = self.writer or self._default_writer
         writer(out, wav, int(model.sr))
         return out
+
+    def release(self) -> None:
+        self._model = None
+        gc.collect()
+        try:
+            import torch
+        except ImportError:
+            return
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()

@@ -88,13 +88,36 @@ def _nvenc() -> dict[str, Any]:
 def _deep_chatterbox() -> dict[str, Any]:
     if importlib.util.find_spec("chatterbox") is None:
         return _result(False, "not installed")
+    backend = None
     try:
         from app.narration.chatterbox import ChatterboxTTS
 
-        model = ChatterboxTTS()._load_model()
-        return _result(model is not None, "model loaded")
+        backend = ChatterboxTTS()
+        model = backend._load_model()
+        return _result(model is not None, "model loaded and released")
     except Exception as exc:  # noqa: BLE001 - health probe must report rather than abort
         return _result(False, str(exc))
+    finally:
+        if backend is not None:
+            backend.release()
+
+
+def _deep_whisper() -> dict[str, Any]:
+    if importlib.util.find_spec("faster_whisper") is None:
+        return _result(False, "not installed")
+    transcriber = None
+    try:
+        from app.captions.align import FasterWhisperTranscriber
+
+        transcriber = FasterWhisperTranscriber()
+        model = transcriber._load_model()
+        detail = f"{transcriber.model_size} on {transcriber.device} loaded and released"
+        return _result(model is not None, detail)
+    except Exception as exc:  # noqa: BLE001 - health probe must report rather than abort
+        return _result(False, str(exc))
+    finally:
+        if transcriber is not None:
+            transcriber.release()
 
 
 def _tiny_render() -> dict[str, Any]:
@@ -145,5 +168,6 @@ def run_media_smoke(*, deep: bool = False) -> dict[str, dict[str, Any]]:
     }
     if deep:
         report["chatterbox"] = _deep_chatterbox()
+        report["faster_whisper"] = _deep_whisper()
         report["tiny_render"] = _tiny_render()
     return report

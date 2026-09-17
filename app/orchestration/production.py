@@ -168,6 +168,12 @@ def _merge_report(
     return QualityReport(ok=not any(issue.fatal for issue in frozen), issues=frozen)
 
 
+def _release(resource) -> None:
+    release = getattr(resource, "release", None)
+    if callable(release):
+        release()
+
+
 def build_professional_stages(
     *,
     channel_id: str,
@@ -201,43 +207,50 @@ def build_professional_stages(
         from app.validation.facts import validate_script
 
         prepare = editorial_preparer or prepare_editorial
-        bundle, scene_plan = prepare(packet, channel_id, editorial_llm)
-        script = bundle.script
-        fact_check = validate_script(script, packet)
-        layout_issues = validate_scene_layout_metadata(scene_plan, channel_id)
-
-        (output / "script.txt").write_text(script, encoding="utf-8")
-        (output / "editorial.json").write_text(
-            json.dumps(asdict(bundle), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        (output / "scenes.json").write_text(
-            json.dumps(asdict(scene_plan), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
-        result: ProductionState = {
-            "editorial_bundle": bundle,
-            "scene_plan": scene_plan,
-            "script": script,
-            "fact_check": fact_check,
-            "fact_ok": fact_check.ok,
-            "layout_issues": layout_issues,
-        }
-        if not fact_check.ok or layout_issues:
-            return result
-
-        make_short = short_builder or build_short_story
-        short_llm = editorial_llm or OllamaJsonClient()
+        owned_llm = editorial_llm is None
+        llm = editorial_llm or OllamaJsonClient()
         try:
-            short_story = make_short(channel_id, packet, script, short_llm)
-        except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
-            result["short_error"] = str(exc)
-        else:
-            result["short_story"] = short_story
-            result["short_scene_plan"] = short_story.scene_plan
-            result["short_script"] = short_story.script
-        return result
+            bundle, scene_plan = prepare(packet, channel_id, llm)
+            script = bundle.script
+            fact_check = validate_script(script, packet)
+            layout_issues = validate_scene_layout_metadata(scene_plan, channel_id)
+
+            (output / "script.txt").write_text(script, encoding="utf-8")
+            (output / "editorial.json").write_text(
+                json.dumps(asdict(bundle), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (output / "scenes.json").write_text(
+                json.dumps(asdict(scene_plan), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            result: ProductionState = {
+                "editorial_bundle": bundle,
+                "scene_plan": scene_plan,
+                "script": script,
+                "fact_check": fact_check,
+                "fact_ok": fact_check.ok,
+                "layout_issues": layout_issues,
+            }
+            if not fact_check.ok or layout_issues:
+                return result
+
+            make_short = short_builder or build_short_story
+            try:
+                short_story = make_short(channel_id, packet, script, llm)
+            except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
+                result["short_error"] = str(exc)
+            else:
+                result["short_story"] = short_story
+                result["short_scene_plan"] = short_story.scene_plan
+                result["short_script"] = short_story.script
+            return result
+        finally:
+            if owned_llm:
+                unload = getattr(llm, "unload", None)
+                if callable(unload):
+                    unload()
 
     def assets(state: ProductionState) -> StageResult:
         if _blocked(state):
@@ -273,17 +286,20 @@ def build_professional_stages(
     def narration(state: ProductionState) -> StageResult:
         if _blocked(state):
             return {}
-        result: ProductionState = {
-            "narration": Path(tts.synthesize(state["script"], output / "narration.wav"))
-        }
-        if state.get("short_script") and state.get("short_asset_manifest") is not None:
-            try:
-                result["short_narration"] = Path(
-                    tts.synthesize(state["short_script"], output / "short-narration.wav")
-                )
-            except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
-                result["short_error"] = str(exc)
-        return result
+        try:
+            result: ProductionState = {
+                "narration": Path(tts.synthesize(state["script"], output / "narration.wav"))
+            }
+            if state.get("short_script") and state.get("short_asset_manifest") is not None:
+                try:
+                    result["short_narration"] = Path(
+                        tts.synthesize(state["short_script"], output / "short-narration.wav")
+                    )
+                except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
+                    result["short_error"] = str(exc)
+            return result
+        finally:
+            _release(tts)
 
     def captions(state: ProductionState) -> StageResult:
         if _blocked(state) or state.get("narration") is None:
@@ -292,19 +308,22 @@ def build_professional_stages(
 
         align = caption_aligner or align_narration
         speech_transcriber = transcriber or FasterWhisperTranscriber()
-        result: ProductionState = {
-            "captions": align(state["narration"], state["script"], speech_transcriber)
-        }
-        if state.get("short_narration") is not None:
-            try:
-                result["short_captions"] = align(
-                    state["short_narration"],
-                    state["short_script"],
-                    speech_transcriber,
-                )
-            except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
-                result["short_error"] = str(exc)
-        return result
+        try:
+            result: ProductionState = {
+                "captions": align(state["narration"], state["script"], speech_transcriber)
+            }
+            if state.get("short_narration") is not None:
+                try:
+                    result["short_captions"] = align(
+                        state["short_narration"],
+                        state["short_script"],
+                        speech_transcriber,
+                    )
+                except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
+                    result["short_error"] = str(exc)
+            return result
+        finally:
+            _release(speech_transcriber)
 
     def audio(state: ProductionState) -> StageResult:
         if _blocked(state) or state.get("narration") is None:
@@ -507,17 +526,25 @@ def produce_professional_episode(
         },
         stages,
     )
+    owned_visual_llm = False
     if visual_llm is None and _visual_critic_enabled():
         from app.editorial.ollama import OllamaJsonClient
 
         visual_llm = OllamaJsonClient()
-    return apply_visual_review(
-        result,
-        channel_id=channel_id,
-        output_dir=Path(output_dir),
-        stages=stages,
-        llm=visual_llm,
-        contact_sheet_builder=contact_sheet_builder,
-        critic=visual_critic,
-        visual_corrector=visual_corrector,
-    )
+        owned_visual_llm = True
+    try:
+        return apply_visual_review(
+            result,
+            channel_id=channel_id,
+            output_dir=Path(output_dir),
+            stages=stages,
+            llm=visual_llm,
+            contact_sheet_builder=contact_sheet_builder,
+            critic=visual_critic,
+            visual_corrector=visual_corrector,
+        )
+    finally:
+        if owned_visual_llm:
+            unload = getattr(visual_llm, "unload", None)
+            if callable(unload):
+                unload()

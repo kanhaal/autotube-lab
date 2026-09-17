@@ -92,13 +92,16 @@ def render_narration(
     voice_profile: str,
     out_dir: Path,
     *,
+    output_path: Path | None = None,
     max_chars: int = 900,
     normalizer=_normalize_wav,
     duration_probe=_probe_duration,
     concatenator=_concat_wavs,
 ) -> NarrationTrack:
     out_dir = Path(out_dir)
-    segment_dir = out_dir / "narration-segments"
+    final_path = Path(output_path) if output_path is not None else out_dir / "narration.wav"
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    segment_dir = out_dir / f"{final_path.stem}-segments"
     segment_dir.mkdir(parents=True, exist_ok=True)
     text_segments = segment_script(script, max_chars=max_chars)
     if not text_segments:
@@ -125,6 +128,5 @@ def render_narration(
         )
         normalized_paths.append(normalized)
 
-    final_path = out_dir / "narration.wav"
     concatenator(normalized_paths, final_path)
     return NarrationTrack(final_path, tuple(records), sum(record.duration for record in records))
