@@ -43,7 +43,7 @@ def test_media_smoke_reports_lightweight_dependency_state(monkeypatch):
     assert result["tiny_render"]["ok"] is None
 
 
-def test_media_smoke_uses_resolved_windows_command_shims(monkeypatch, tmp_path):
+def test_media_smoke_uses_resolved_windows_command_shims(monkeypatch):
     from app.health import media
 
     resolved = {
@@ -79,6 +79,8 @@ def test_media_smoke_uses_resolved_windows_command_shims(monkeypatch, tmp_path):
 
 
 def test_tiny_render_uses_resolved_windows_npx_shim(monkeypatch):
+    from pathlib import Path
+
     from app.health import media
 
     resolved = {
@@ -92,10 +94,7 @@ def test_tiny_render_uses_resolved_windows_npx_shim(monkeypatch):
 
     def fake_run(command, **kwargs):
         commands.append(command)
-        target = command[6]
-        from pathlib import Path
-
-        Path(target).write_bytes(b"video")
+        Path(command[5]).write_bytes(b"video")
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(media.subprocess, "run", fake_run)
