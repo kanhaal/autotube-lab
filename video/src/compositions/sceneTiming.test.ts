@@ -74,4 +74,32 @@ describe('scene timing', () => {
       {from: 30, durationInFrames: 90},
     ]);
   });
+
+  it('cuts at the exact aligned narration word instead of evenly interpolating the cue', () => {
+    const exactPkg = structuredClone(pkg) as RenderPackageV1 & {
+      captions: {
+        schema_version: '1';
+        cues: Array<RenderPackageV1['captions']['cues'][number] & {
+          word_timings?: Array<{text: string; start: number; end: number}>;
+        }>;
+      };
+    };
+    exactPkg.captions.cues = [{
+      start: 0,
+      end: 4,
+      text: 'one two three four',
+      words: ['one', 'two', 'three', 'four'],
+      word_timings: [
+        {text: 'one', start: 0, end: 0.35},
+        {text: 'two', start: 0.4, end: 0.8},
+        {text: 'three', start: 2.8, end: 3.2},
+        {text: 'four', start: 3.5, end: 4},
+      ],
+    }];
+
+    expect(sceneFrameWindows(exactPkg)).toEqual([
+      {from: 0, durationInFrames: 24},
+      {from: 24, durationInFrames: 96},
+    ]);
+  });
 });
