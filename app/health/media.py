@@ -35,10 +35,11 @@ def _module(name: str) -> dict[str, Any]:
 
 
 def _command_version(name: str) -> dict[str, Any]:
-    if shutil.which(name) is None:
+    executable = shutil.which(name)
+    if executable is None:
         return _result(False, "not found")
     try:
-        completed = _run([name, "--version"])
+        completed = _run([executable, "--version"])
     except (OSError, subprocess.SubprocessError) as exc:
         return _result(False, str(exc))
     detail = (completed.stdout or completed.stderr).strip().splitlines()
@@ -46,11 +47,12 @@ def _command_version(name: str) -> dict[str, Any]:
 
 
 def _ollama_model() -> dict[str, Any]:
-    if shutil.which("ollama") is None:
+    executable = shutil.which("ollama")
+    if executable is None:
         return _result(False, "ollama not found")
     model = os.getenv("AUTOTUBE_LLM_MODEL", "qwen3.5:9b")
     try:
-        completed = _run(["ollama", "list"])
+        completed = _run([executable, "list"])
     except (OSError, subprocess.SubprocessError) as exc:
         return _result(False, str(exc))
     found = completed.returncode == 0 and any(
@@ -60,11 +62,12 @@ def _ollama_model() -> dict[str, Any]:
 
 
 def _remotion() -> dict[str, Any]:
-    if shutil.which("npm") is None:
+    npm = shutil.which("npm")
+    if npm is None:
         return _result(False, "npm not found")
     try:
         completed = _run(
-            ["npm", "--prefix", "video", "list", "@remotion/cli", "--depth=0"],
+            [npm, "--prefix", "video", "list", "@remotion/cli", "--depth=0"],
             timeout=60,
         )
     except (OSError, subprocess.SubprocessError) as exc:
@@ -74,10 +77,11 @@ def _remotion() -> dict[str, Any]:
 
 
 def _nvenc() -> dict[str, Any]:
-    if shutil.which("ffmpeg") is None:
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
         return _result(False, "ffmpeg not found")
     try:
-        completed = _run(["ffmpeg", "-hide_banner", "-encoders"])
+        completed = _run([ffmpeg, "-hide_banner", "-encoders"])
     except (OSError, subprocess.SubprocessError) as exc:
         return _result(False, str(exc))
     output = completed.stdout + completed.stderr
@@ -121,8 +125,11 @@ def _deep_whisper() -> dict[str, Any]:
 
 
 def _tiny_render() -> dict[str, Any]:
-    if shutil.which("npm") is None or shutil.which("node") is None:
-        return _result(False, "node/npm unavailable")
+    node = shutil.which("node")
+    npm = shutil.which("npm")
+    npx = shutil.which("npx")
+    if node is None or npm is None or npx is None:
+        return _result(False, "node/npm/npx unavailable")
     video_dir = Path("video")
     fixture = video_dir / "media-smoke-props.json"
     if not fixture.is_file():
@@ -132,7 +139,7 @@ def _tiny_render() -> dict[str, Any]:
             target = Path(tmp) / "tiny.mp4"
             completed = _run(
                 [
-                    "npx",
+                    npx,
                     "remotion",
                     "render",
                     "src/index.ts",
