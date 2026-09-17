@@ -1,0 +1,56 @@
+{
+  "pkg": {
+    "root": ".",
+    "manifest": {
+      "schema_version": "1",
+      "format": "long",
+      "channel_id": "kernelrush",
+      "channel_name": "KernelRush",
+      "title": "Media Smoke",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "duration_source": "audio",
+      "audio_path": "",
+      "theme": {}
+    },
+    "script": {
+      "title": "Media Smoke",
+      "script": "Professional media smoke render exercises the local Remotion stack."
+    },
+    "scenes": {
+      "schema_version": "1",
+      "channel_id": "kernelrush",
+      "format": "longform",
+      "scenes": [
+        {
+          "id": "media-smoke-1",
+          "narration": "Professional media smoke render exercises the local Remotion stack.",
+          "purpose": "health",
+          "scene_type": "hook",
+          "headline": "MEDIA STACK ONLINE",
+          "subheadline": "Six-second local fixture",
+          "source_ids": [],
+          "asset_ids": [],
+          "motion": "push_up",
+          "emphasis": ["media", "stack"],
+          "transition": "crossfade",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {}
+        }
+      ]
+    },
+    "captions": {
+      "schema_version": "1",
+      "cues": [
+        {
+          "start": 0,
+          "end": 6,
+          "text": "Professional media smoke render exercises the local Remotion stack.",
+          "words": ["Professional", "media", "smoke", "render", "exercises", "the", "local", "Remotion", "stack."]
+        }
+      ]
+    },
+    "assets": {"schema_version": "1", "records": []}
+  }
+}
