@@ -12,13 +12,34 @@ class TTSBackend(Protocol):
 
 
 class ConfiguredTTS:
-    def __init__(self, backend: TTSBackend, voice_profile: str):
+    def __init__(
+        self,
+        backend: TTSBackend,
+        voice_profile: str,
+        *,
+        segmented: bool = True,
+        max_chars: int = 900,
+    ):
         self.backend = backend
         self.voice_profile = voice_profile
+        self.segmented = segmented
+        self.max_chars = max_chars
         self.name = getattr(backend, "name", backend.__class__.__name__.lower())
 
     def synthesize(self, text: str, out: Path) -> Path:
-        return self.backend.synthesize(text, out, self.voice_profile)
+        out = Path(out)
+        if not self.segmented:
+            return self.backend.synthesize(text, out, self.voice_profile)
+        from app.narration.assemble import render_narration
+
+        track = render_narration(
+            text,
+            self.backend,
+            self.voice_profile,
+            out.parent,
+            max_chars=self.max_chars,
+        )
+        return track.path
 
 
 def select_tts_backend(name: str, **deps):
