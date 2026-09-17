@@ -32,7 +32,7 @@
           "subheadline": "One-frame CI smoke test",
           "source_ids": [],
           "asset_ids": [],
-          "motion": "subtle_push",
+          "motion": "push_up",
           "emphasis": ["renderer", "online"],
           "transition": "cut",
           "fallback_scene_type": "fallback_editorial",
