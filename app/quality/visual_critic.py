@@ -35,10 +35,11 @@ def critique_contact_sheet(
     if not contact.is_file():
         raise FileNotFoundError(contact)
     thumb_paths = tuple(Path(path) for path in thumbnails)
+    visible_thumbs = tuple(path for path in thumb_paths if path.is_file())
     payload = {
         "channel_id": channel_id,
         "contact_sheet_path": str(contact.resolve()),
-        "thumbnail_paths": [str(path.resolve()) for path in thumb_paths if path.is_file()],
+        "thumbnail_paths": [str(path.resolve()) for path in visible_thumbs],
         "allowed_issue_codes": sorted(_ALLOWED_CODES),
     }
     system_prompt = (
@@ -55,6 +56,7 @@ def critique_contact_sheet(
             "Return one valid JSON object with ok, issues, and targeted_changes only. "
             "Issue codes must come from the supplied allowed_issue_codes."
         ),
+        image_paths=(contact, *visible_thumbs),
     )
     if not isinstance(raw.get("ok"), bool):
         raise ValueError("visual critic must return boolean ok")
