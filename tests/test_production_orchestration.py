@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from app.domain.models import StoryCandidate
 from app.quality.models import QualityIssue, QualityReport
@@ -70,6 +71,129 @@ def test_produce_episode_marks_failed_hard_qa_as_not_publishable():
 
     assert result.quality_report == failed
     assert result.publishable is False
+
+
+def test_visual_review_skips_entirely_when_hard_qa_failed(tmp_path: Path):
+    from app.orchestration.production import (
+        ProductionResult,
+        ProductionStages,
+        apply_visual_review,
+    )
+
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"video")
+    failed = QualityReport(
+        ok=False,
+        issues=(QualityIssue("missing_audio", "render has no audio", fatal=True),),
+    )
+    result = ProductionResult(state={"long_video": video}, quality_report=failed)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("visual review must not run after failed hard QA")
+
+    stages = ProductionStages(*(forbidden for _ in range(8)))
+    reviewed = apply_visual_review(
+        result,
+        channel_id="kernelrush",
+        output_dir=tmp_path,
+        stages=stages,
+        llm=object(),
+        contact_sheet_builder=forbidden,
+        critic=forbidden,
+        visual_corrector=forbidden,
+    )
+
+    assert reviewed == result
+
+
+def test_visual_review_allows_at_most_one_targeted_correction_rerender(tmp_path: Path):
+    from app.orchestration.production import (
+        ProductionResult,
+        ProductionStages,
+        apply_visual_review,
+    )
+    from app.quality.visual_critic import VisualCritique, VisualIssue
+
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"video")
+    thumbnail = tmp_path / "thumb.png"
+    thumbnail.write_bytes(b"png")
+    green = QualityReport(ok=True, issues=())
+    result = ProductionResult(
+        state={
+            "long_video": video,
+            "thumbnails": (thumbnail,),
+            "scene_plan": "original",
+        },
+        quality_report=green,
+    )
+    seen: list[str] = []
+
+    def noop(state):
+        return {}
+
+    def render(state):
+        seen.append("render")
+        return {"long_video": video}
+
+    def thumbnails(state):
+        seen.append("thumbnails")
+        return {"thumbnails": (thumbnail,)}
+
+    def qa(state):
+        seen.append("qa")
+        return {"quality_report": green}
+
+    stages = ProductionStages(
+        editorial=noop,
+        assets=noop,
+        narration=noop,
+        captions=noop,
+        audio=noop,
+        render=render,
+        thumbnails=thumbnails,
+        qa=qa,
+    )
+
+    def build_contact_sheet(video_path, out):
+        Path(out).write_bytes(b"contact")
+        return Path(out)
+
+    critique = VisualCritique(
+        ok=False,
+        issues=(VisualIssue("clutter", "Secondary copy competes with the headline"),),
+        targeted_changes=("Reduce secondary copy",),
+    )
+
+    reviewed = apply_visual_review(
+        result,
+        channel_id="kernelrush",
+        output_dir=tmp_path,
+        stages=stages,
+        llm=object(),
+        contact_sheet_builder=build_contact_sheet,
+        critic=lambda *args: critique,
+        visual_corrector=lambda state, visual: {"scene_plan": "corrected"},
+    )
+
+    assert seen == ["render", "thumbnails", "qa"]
+    assert reviewed.state["scene_plan"] == "corrected"
+    assert reviewed.state["visual_correction_attempts"] == 1
+    assert reviewed.state["visual_targeted_changes"] == ("Reduce secondary copy",)
+
+    reviewed_again = apply_visual_review(
+        reviewed,
+        channel_id="kernelrush",
+        output_dir=tmp_path,
+        stages=stages,
+        llm=object(),
+        contact_sheet_builder=build_contact_sheet,
+        critic=lambda *args: critique,
+        visual_corrector=lambda state, visual: {"scene_plan": "corrected-again"},
+    )
+
+    assert seen == ["render", "thumbnails", "qa"]
+    assert reviewed_again.state["visual_correction_attempts"] == 1
 
 
 def test_run_channel_never_invokes_publisher_after_failed_professional_qa(
