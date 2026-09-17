@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.assets.models import AssetManifest
+from app.assets.service import prepare_assets
 from app.audio.library import AudioLibrary
 from app.audio.mix import mix_episode_audio
 from app.captions.align import FasterWhisperTranscriber, align_narration
@@ -82,6 +83,7 @@ def render_professional_episode(
     package_builder=build_render_package,
     thumbnail_renderer=render_thumbnail_variants,
     short_builder=build_short_story,
+    asset_preparer=prepare_assets,
 ) -> ProductionOutputs:
     output = Path(out_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -126,6 +128,12 @@ def render_professional_episode(
     try:
         short_llm = llm or OllamaJsonClient()
         short_story = short_builder(channel_id, packet, script, short_llm)
+        short_assets = asset_preparer(
+            short_story.scene_plan,
+            packet,
+            channel_cfg,
+            output / "short-assets",
+        )
         short_audio = Path(tts.synthesize(short_story.script, output / "short-narration.wav"))
         short_captions = caption_aligner(short_audio, short_story.script, speech_transcriber)
         short_master_audio = _master_audio(
@@ -139,7 +147,7 @@ def render_professional_episode(
             short_story.script,
             short_story.scene_plan,
             short_captions,
-            asset_manifest,
+            short_assets,
             short_master_audio,
             output / "render-package-short",
             format="short",
