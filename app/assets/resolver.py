@@ -9,6 +9,9 @@ class AssetResolutionError(ValueError):
     pass
 
 
+VERIFIED_SOURCE_SCENE_TYPES = frozenset({"source_browser", "device", "github", "game_store"})
+
+
 @dataclass(frozen=True)
 class AssetRequest:
     id: str
@@ -47,7 +50,7 @@ def resolve_scene_assets(scene_plan: ScenePlan, packet: dict) -> tuple[AssetRequ
     requests: list[AssetRequest] = []
 
     for scene in scene_plan.scenes:
-        if scene.scene_type != "source_browser":
+        if scene.scene_type not in VERIFIED_SOURCE_SCENE_TYPES:
             continue
 
         source_url = str(scene.data.get("source_url", "")).strip()
