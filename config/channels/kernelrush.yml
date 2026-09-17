@@ -8,3 +8,16 @@ brand:
   foreground: "#F5F7FA"
   accent: "#5EF2C2"
   secondary: "#7AA2FF"
+voice:
+  backend: chatterbox
+  fallback_backend: kokoro
+  profile: kernelrush_analytical
+  settings:
+    exaggeration: 0.35
+    cfg_weight: 0.55
+  fallback_settings:
+    voice: af_heart
+    speed: 0.96
+audio:
+  mood: analytical
+  music_enabled: true
