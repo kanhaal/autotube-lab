@@ -82,4 +82,25 @@ describe('enhanced Short presentation', () => {
 
     expect(activeShortVisual(boundPkg, 0)?.asset?.local_path).toBe('images/right.png');
   });
+
+  it('renders an original fallback card when optional source capture fails', () => {
+    const fallbackPkg: RenderPackageV1 = {
+      ...pkg,
+      scenes: {
+        ...pkg.scenes,
+        scenes: [{...pkg.scenes.scenes[0], data: {}}],
+      },
+      assets: {
+        schema_version: '1',
+        records: [{
+          id: 'fallback-s1', kind: 'fallback_editorial', local_path: 'images/fallback-s1.png',
+          source_url: null, source_name: null, usage: 'evidence', scene_id: 's1',
+          license_note: 'original AutoTube generated graphic', sha256: 'fallback',
+          captured_at: '2026-09-17T00:00:00+00:00',
+        }],
+      },
+    };
+
+    expect(activeShortVisual(fallbackPkg, 0)?.asset?.local_path).toBe('images/fallback-s1.png');
+  });
 });
