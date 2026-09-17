@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -15,9 +16,14 @@ _PACKAGE_FILES = {
 
 
 class RemotionRunner:
-    def __init__(self, *, video_dir: Path = Path("video"), npx: str = "npx") -> None:
+    def __init__(
+        self,
+        *,
+        video_dir: Path = Path("video"),
+        npx: str | None = None,
+    ) -> None:
         self.video_dir = Path(video_dir)
-        self.npx = npx
+        self.npx = npx or shutil.which("npx") or "npx"
 
     def command(self, package_dir: Path, composition: str, out: Path) -> list[str]:
         package_root = Path(package_dir).resolve()
@@ -71,6 +77,8 @@ class RemotionRunner:
             shell=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
         if result.returncode != 0:
