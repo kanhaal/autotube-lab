@@ -15,6 +15,7 @@ class AssetRecord:
     license_note: str | None
     sha256: str
     captured_at: datetime
+    scene_id: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -27,6 +28,7 @@ class AssetRecord:
             "license_note": self.license_note,
             "sha256": self.sha256,
             "captured_at": self.captured_at.isoformat(),
+            "scene_id": self.scene_id,
         }
 
     @classmethod
@@ -41,6 +43,7 @@ class AssetRecord:
             license_note=payload.get("license_note"),
             sha256=payload["sha256"],
             captured_at=datetime.fromisoformat(payload["captured_at"]),
+            scene_id=payload.get("scene_id"),
         )
 
 
