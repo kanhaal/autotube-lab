@@ -37,6 +37,7 @@ class ConfiguredTTS:
             self.backend,
             self.voice_profile,
             out.parent,
+            output_path=out,
             max_chars=self.max_chars,
         )
         return track.path
