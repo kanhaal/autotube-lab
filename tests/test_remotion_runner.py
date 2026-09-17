@@ -1,0 +1,43 @@
+from pathlib import Path
+
+from app.rendering.runner import RemotionRunner
+
+
+def test_remotion_command_is_argument_safe(tmp_path: Path):
+    package_dir = tmp_path / "episode package"
+    package_dir.mkdir()
+    out = tmp_path / "renders" / "episode.mp4"
+
+    runner = RemotionRunner(video_dir=Path("video"), npx="npx")
+    command = runner.command(package_dir, "KernelRushLong", out)
+
+    assert command[:4] == ["npx", "remotion", "render", "src/index.ts"]
+    assert "KernelRushLong" in command
+    assert str(out.resolve()) in command
+    assert f"--public-dir={package_dir.resolve()}" in command
+    assert f"--props={package_dir.resolve() / 'remotion-props.json'}" in command
+
+
+def test_remotion_runner_uses_shell_false(monkeypatch, tmp_path: Path):
+    package_dir = tmp_path / "package"
+    package_dir.mkdir()
+    out = tmp_path / "episode.mp4"
+    calls = []
+
+    class Result:
+        returncode = 0
+        stdout = "ok"
+        stderr = ""
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        out.write_bytes(b"video")
+        return Result()
+
+    monkeypatch.setattr("app.rendering.runner.subprocess.run", fake_run)
+    runner = RemotionRunner(video_dir=Path("video"), npx="npx")
+    result = runner.render(package_dir, "KernelRushLong", out)
+
+    assert result == out.resolve()
+    assert calls[0][1]["shell"] is False
+    assert calls[0][1]["cwd"] == Path("video").resolve()
