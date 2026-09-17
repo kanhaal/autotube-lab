@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.assets.models import AssetManifest
+from app.audio.library import AudioLibrary
+from app.audio.mix import mix_episode_audio
 from app.captions.align import FasterWhisperTranscriber, align_narration
 from app.editorial.ollama import OllamaJsonClient
 from app.rendering.package import build_render_package
@@ -42,6 +44,27 @@ def composition_id(channel_id: str, format_name: str) -> str:
     return prefix + suffix
 
 
+def _configured_audio_library() -> AudioLibrary:
+    path = Path(os.getenv("AUTOTUBE_AUDIO_LIBRARY", "config/audio/library.yml"))
+    if not path.is_file():
+        return AudioLibrary(())
+    return AudioLibrary.from_yaml(path)
+
+
+def _master_audio(narration: Path, channel_cfg: dict, out: Path) -> Path:
+    audio_cfg = channel_cfg.get("audio") or {}
+    if not isinstance(audio_cfg, dict):
+        audio_cfg = {}
+    channel_id = str(channel_cfg.get("id", "")).strip().lower()
+    mood = str(audio_cfg.get("mood", "")).strip()
+    music = None
+    if bool(audio_cfg.get("music_enabled", False)):
+        selected = _configured_audio_library().select("music", channel_id, mood)
+        if selected is not None:
+            music = selected.path
+    return Path(mix_episode_audio(Path(narration), music, (), Path(out)))
+
+
 def render_professional_episode(
     *,
     channel_cfg: dict,
@@ -69,6 +92,7 @@ def render_professional_episode(
 
     narration = Path(tts.synthesize(script, output / "narration.wav"))
     captions = caption_aligner(narration, script, speech_transcriber)
+    master_audio = _master_audio(narration, channel_cfg, output / "master.wav")
     long_package = package_builder(
         channel_cfg,
         title,
@@ -76,7 +100,7 @@ def render_professional_episode(
         scene_plan,
         captions,
         asset_manifest,
-        narration,
+        master_audio,
         output / "render-package-long",
         format="long",
     )
@@ -104,6 +128,11 @@ def render_professional_episode(
         short_story = short_builder(channel_id, packet, script, short_llm)
         short_audio = Path(tts.synthesize(short_story.script, output / "short-narration.wav"))
         short_captions = caption_aligner(short_audio, short_story.script, speech_transcriber)
+        short_master_audio = _master_audio(
+            short_audio,
+            channel_cfg,
+            output / "short-master.wav",
+        )
         short_package = package_builder(
             channel_cfg,
             title,
@@ -111,7 +140,7 @@ def render_professional_episode(
             short_story.scene_plan,
             short_captions,
             asset_manifest,
-            short_audio,
+            short_master_audio,
             output / "render-package-short",
             format="short",
         )
@@ -132,5 +161,5 @@ def render_professional_episode(
         render_package=Path(long_package),
         short_render_package=Path(short_package) if short_package else None,
         short_error=short_error,
-        audio=narration,
+        audio=master_audio,
     )
