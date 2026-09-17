@@ -11,6 +11,7 @@ def test_env_example_documents_professional_media_defaults():
         "AUTOTUBE_LLM_MODEL=qwen3.5:9b",
         "AUTOTUBE_CAPTION_MODEL=small.en",
         "AUTOTUBE_AUDIO_LIBRARY=config/audio/library.yml",
+        "AUTOTUBE_VISUAL_CRITIC=0",
     }
     for line in expected:
         assert line in text
@@ -20,9 +21,9 @@ def test_windows_setup_checks_local_media_dependencies_without_downloading_model
     text = Path("scripts/setup_windows.ps1").read_text(encoding="utf-8").lower()
     for dependency in ("python", "ffmpeg", "ffprobe", "ollama", "node", "npm"):
         assert dependency in text
+    assert Path("video/package-lock.json").is_file()
     assert "npm ci" in text
-    assert "test-path \"package-lock.json\"" in text
-    assert "npm install" in text
+    assert "npm install" not in text
     assert "& ollama pull" not in text
     assert "ollama pull qwen3.5:9b" in text
 
