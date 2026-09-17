@@ -29,6 +29,16 @@ const packageDurationFrames = (pkg: RenderPackageV1 | undefined): number => {
   return Math.max(1, Math.ceil(Math.max(cueEnd, 1) * fps));
 };
 
+const longMetadata = (rawProps: unknown) => {
+  const props = rawProps as LongInput;
+  return {
+    durationInFrames: packageDurationFrames(props.pkg),
+    fps: props.pkg?.manifest.fps ?? 30,
+    width: props.pkg?.manifest.width ?? 1920,
+    height: props.pkg?.manifest.height ?? 1080,
+  };
+};
+
 const KernelRushEntry = ({pkg}: LongInput) => (pkg ? <KernelRushLong pkg={pkg} /> : <Placeholder />);
 const LobbySignalEntry = ({pkg}: LongInput) => (pkg ? <LobbySignalLong pkg={pkg} /> : <Placeholder />);
 
@@ -41,12 +51,7 @@ export const RemotionRoot = () => (
       fps={30}
       width={1920}
       height={1080}
-      calculateMetadata={({props}) => ({
-        durationInFrames: packageDurationFrames(props.pkg),
-        fps: props.pkg?.manifest.fps ?? 30,
-        width: props.pkg?.manifest.width ?? 1920,
-        height: props.pkg?.manifest.height ?? 1080,
-      })}
+      calculateMetadata={({props}) => longMetadata(props)}
     />
     <Composition
       id="LobbySignalLong"
@@ -55,12 +60,7 @@ export const RemotionRoot = () => (
       fps={30}
       width={1920}
       height={1080}
-      calculateMetadata={({props}) => ({
-        durationInFrames: packageDurationFrames(props.pkg),
-        fps: props.pkg?.manifest.fps ?? 30,
-        width: props.pkg?.manifest.width ?? 1920,
-        height: props.pkg?.manifest.height ?? 1080,
-      })}
+      calculateMetadata={({props}) => longMetadata(props)}
     />
     <Composition
       id="KernelRushShort"
