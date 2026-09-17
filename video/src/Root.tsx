@@ -1,7 +1,10 @@
 import {AbsoluteFill, Composition} from 'remotion';
 
 import {KernelRushLong} from './compositions/KernelRushLong';
+import {KernelRushShort} from './compositions/KernelRushShort';
 import {LobbySignalLong} from './compositions/LobbySignalLong';
+import {LobbySignalShort} from './compositions/LobbySignalShort';
+import {shortDurationFrames, validateShortPackage} from './compositions/shortTiming';
 import type {RenderPackageV1} from './types';
 
 const Placeholder = () => (
@@ -20,7 +23,7 @@ const Placeholder = () => (
   </AbsoluteFill>
 );
 
-type LongInput = {pkg?: RenderPackageV1};
+type RenderInput = {pkg?: RenderPackageV1};
 
 const packageDurationFrames = (pkg: RenderPackageV1 | undefined): number => {
   if (!pkg) return 30;
@@ -30,7 +33,7 @@ const packageDurationFrames = (pkg: RenderPackageV1 | undefined): number => {
 };
 
 const longMetadata = (rawProps: unknown) => {
-  const props = rawProps as LongInput;
+  const props = rawProps as RenderInput;
   return {
     durationInFrames: packageDurationFrames(props.pkg),
     fps: props.pkg?.manifest.fps ?? 30,
@@ -39,8 +42,24 @@ const longMetadata = (rawProps: unknown) => {
   };
 };
 
-const KernelRushEntry = ({pkg}: LongInput) => (pkg ? <KernelRushLong pkg={pkg} /> : <Placeholder />);
-const LobbySignalEntry = ({pkg}: LongInput) => (pkg ? <LobbySignalLong pkg={pkg} /> : <Placeholder />);
+const shortMetadata = (rawProps: unknown) => {
+  const props = rawProps as RenderInput;
+  if (!props.pkg) {
+    return {durationInFrames: 900, fps: 30, width: 1080, height: 1920};
+  }
+  validateShortPackage(props.pkg);
+  return {
+    durationInFrames: shortDurationFrames(props.pkg),
+    fps: props.pkg.manifest.fps,
+    width: 1080,
+    height: 1920,
+  };
+};
+
+const KernelRushEntry = ({pkg}: RenderInput) => (pkg ? <KernelRushLong pkg={pkg} /> : <Placeholder />);
+const LobbySignalEntry = ({pkg}: RenderInput) => (pkg ? <LobbySignalLong pkg={pkg} /> : <Placeholder />);
+const KernelRushShortEntry = ({pkg}: RenderInput) => (pkg ? <KernelRushShort pkg={pkg} /> : <Placeholder />);
+const LobbySignalShortEntry = ({pkg}: RenderInput) => (pkg ? <LobbySignalShort pkg={pkg} /> : <Placeholder />);
 
 export const RemotionRoot = () => (
   <>
@@ -64,19 +83,21 @@ export const RemotionRoot = () => (
     />
     <Composition
       id="KernelRushShort"
-      component={Placeholder}
-      durationInFrames={30}
+      component={KernelRushShortEntry}
+      durationInFrames={900}
       fps={30}
       width={1080}
       height={1920}
+      calculateMetadata={({props}) => shortMetadata(props)}
     />
     <Composition
       id="LobbySignalShort"
-      component={Placeholder}
-      durationInFrames={30}
+      component={LobbySignalShortEntry}
+      durationInFrames={900}
       fps={30}
       width={1080}
       height={1920}
+      calculateMetadata={({props}) => shortMetadata(props)}
     />
   </>
 );
