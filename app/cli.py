@@ -29,8 +29,12 @@ def _build_channel_tts(cfg):
 
     voice = cfg.get("voice", {})
     profile = voice.get("profile", "default")
-    primary = select_tts_backend(
+    primary_name = os.getenv(
+        "AUTOTUBE_TTS_BACKEND",
         voice.get("backend", "chatterbox"),
+    ).strip().lower()
+    primary = select_tts_backend(
+        primary_name,
         voice_profiles={profile: voice.get("settings", {})},
     )
     fallback = select_tts_backend(
