@@ -1,3 +1,4 @@
+import base64
 import json
 
 from app.editorial.ollama import OllamaJsonClient, OllamaJsonError
@@ -25,6 +26,37 @@ def test_json_client_uses_configured_model(monkeypatch):
 
     assert client.generate_json("system", {"x": 1}) == {"ok": True}
     assert seen["model"] == "qwen3.5:9b"
+
+
+def test_json_client_sends_local_images_to_ollama(monkeypatch, tmp_path):
+    seen = {}
+    image = tmp_path / "contact.jpg"
+    image.write_bytes(b"visual-bytes")
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def read(self):
+            return json.dumps({"response": '{"ok": true}'}).encode()
+
+    def fake_urlopen(req, timeout):
+        seen.update(json.loads(req.data))
+        return Response()
+
+    monkeypatch.setattr("app.editorial.ollama.urllib.request.urlopen", fake_urlopen)
+
+    result = OllamaJsonClient().generate_json(
+        "system",
+        {"x": 1},
+        image_paths=(image,),
+    )
+
+    assert result == {"ok": True}
+    assert seen["images"] == [base64.b64encode(b"visual-bytes").decode("ascii")]
 
 
 def test_json_client_repairs_invalid_json_once(monkeypatch):
