@@ -78,6 +78,7 @@ export type AssetRecordV1 = {
   license_note: string | null;
   sha256: string;
   captured_at: string;
+  scene_id?: string | null;
 };
 
 export type AssetManifestV1 = {
