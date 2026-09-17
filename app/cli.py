@@ -138,6 +138,12 @@ def cmd_approve_renderer(args):
     print(json.dumps({"renderer": args.renderer, "approved": True}, indent=2))
 
 
+def cmd_media_smoke(args):
+    from app.health.media import run_media_smoke
+
+    print(json.dumps(run_media_smoke(deep=args.deep), indent=2))
+
+
 def cmd_weights(args):
     repository = _repo(args)
     cfg = channel_config(args.channel)
@@ -236,6 +242,10 @@ def main():
     command = sub.add_parser("approve-renderer")
     command.add_argument("renderer", choices=["professional"])
     command.set_defaults(func=cmd_approve_renderer)
+
+    command = sub.add_parser("media-smoke")
+    command.add_argument("--deep", action="store_true")
+    command.set_defaults(func=cmd_media_smoke)
 
     command = sub.add_parser("refresh-weights")
     command.add_argument("channel", choices=["kernelrush", "lobbysignal"])
