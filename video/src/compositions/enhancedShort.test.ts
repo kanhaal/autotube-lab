@@ -42,4 +42,15 @@ describe('enhanced Short presentation', () => {
     expect(visual?.style.opacity).toBe(0);
     expect(String(visual?.style.transform)).toContain('translateY');
   });
+
+  it.each(['device', 'github', 'game_store'])('uses verified screenshots for %s scenes', (sceneType) => {
+    const productPkg: RenderPackageV1 = {
+      ...pkg,
+      scenes: {
+        ...pkg.scenes,
+        scenes: [{...pkg.scenes.scenes[0], scene_type: sceneType}],
+      },
+    };
+    expect(activeShortVisual(productPkg, 0)?.asset?.local_path).toBe('images/source-1.png');
+  });
 });
