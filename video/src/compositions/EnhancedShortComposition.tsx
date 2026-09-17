@@ -1,6 +1,10 @@
 import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
 
-import {resolveSceneAsset, scenePresentationStyle} from '../scenes/presentation';
+import {
+  resolveSceneAsset,
+  scenePresentationStyle,
+  sceneSupportsVerifiedAsset,
+} from '../scenes/presentation';
 import type {AssetRecordV1, RenderPackageV1, SceneSpecV1} from '../types';
 import type {ChannelTheme} from '../themes/types';
 import {ShortComposition} from './ShortComposition';
@@ -26,7 +30,7 @@ export const activeShortVisual = (
   const localFrame = Math.max(0, frame - window.from);
   return {
     scene,
-    asset: scene.scene_type === 'source_browser'
+    asset: sceneSupportsVerifiedAsset(scene)
       ? resolveSceneAsset(scene, pkg.assets.records)
       : undefined,
     style: scenePresentationStyle(scene, localFrame, Math.max(1, pkg.manifest.fps || 30)),
@@ -85,9 +89,7 @@ export const EnhancedShortComposition = ({
   return (
     <AbsoluteFill>
       <ShortComposition pkg={pkg} theme={theme} />
-      {visual?.scene.scene_type === 'source_browser' ? (
-        <SourceOverlay visual={visual} theme={theme} />
-      ) : null}
+      {visual?.asset ? <SourceOverlay visual={visual} theme={theme} /> : null}
     </AbsoluteFill>
   );
 };
