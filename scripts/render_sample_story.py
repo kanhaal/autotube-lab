@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,8 +93,12 @@ def _sha256(path: Path) -> str:
 def _tts(channel_cfg: dict) -> ConfiguredTTS:
     voice = channel_cfg.get("voice") or {}
     profile = voice.get("profile", "default")
-    primary = select_tts_backend(
+    primary_name = os.getenv(
+        "AUTOTUBE_TTS_BACKEND",
         voice.get("backend", "chatterbox"),
+    ).strip().lower()
+    primary = select_tts_backend(
+        primary_name,
         voice_profiles={profile: voice.get("settings", {})},
     )
     fallback = select_tts_backend(
@@ -205,23 +210,49 @@ def render_story(fixture: Path, output_root: Path) -> dict:
         fallback=True,
     )
     music, sfx = _generate_audio_fixture(target / "audio-fixtures")
-    tts = _tts(channel_cfg)
-    transcriber = FasterWhisperTranscriber()
     runner = RemotionRunner()
-    rendered: dict[str, str | list[str]] = {}
+    prepared: dict[str, dict] = {}
 
     for format_name in ("long", "short"):
         plan = _scene_plan(story, format_name)
-        script = _script(plan)
-        assets = _assets(story, plan, source_card, fallback_card)
-        narration = Path(tts.synthesize(script, target / f"{format_name}-narration.wav"))
-        captions = align_narration(narration, script, transcriber)
-        events = tuple(
-            SfxEvent(path=sfx, start_ms=int(float(item["at"]) * 1000), volume=0.25)
-            for item in story["audio"]["sfx_events"]
-        )
+        prepared[format_name] = {
+            "plan": plan,
+            "script": _script(plan),
+            "assets": _assets(story, plan, source_card, fallback_card),
+        }
+
+    tts = _tts(channel_cfg)
+    try:
+        for format_name in ("long", "short"):
+            item = prepared[format_name]
+            item["narration"] = Path(
+                tts.synthesize(item["script"], target / f"{format_name}-narration.wav")
+            )
+    finally:
+        tts.release()
+
+    transcriber = FasterWhisperTranscriber()
+    try:
+        for format_name in ("long", "short"):
+            item = prepared[format_name]
+            item["captions"] = align_narration(
+                item["narration"],
+                item["script"],
+                transcriber,
+            )
+    finally:
+        transcriber.release()
+
+    rendered: dict[str, str | list[str]] = {}
+    events = tuple(
+        SfxEvent(path=sfx, start_ms=int(float(item["at"]) * 1000), volume=0.25)
+        for item in story["audio"]["sfx_events"]
+    )
+
+    for format_name in ("long", "short"):
+        item = prepared[format_name]
         master = mix_episode_audio(
-            narration,
+            item["narration"],
             music,
             events,
             target / f"{format_name}-master.wav",
@@ -229,10 +260,10 @@ def render_story(fixture: Path, output_root: Path) -> dict:
         package = build_render_package(
             channel_cfg,
             story["title"],
-            script,
-            plan,
-            captions,
-            assets,
+            item["script"],
+            item["plan"],
+            item["captions"],
+            item["assets"],
             master,
             target / f"render-package-{format_name}",
             format=format_name,
@@ -249,8 +280,8 @@ def render_story(fixture: Path, output_root: Path) -> dict:
                 for path in render_thumbnail_variants(
                     channel_cfg,
                     story["title"],
-                    plan,
-                    assets,
+                    item["plan"],
+                    item["assets"],
                     target / "thumbnails",
                     count=5,
                 )
