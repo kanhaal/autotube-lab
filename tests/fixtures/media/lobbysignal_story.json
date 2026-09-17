@@ -1,0 +1,56 @@
+{
+  "channel_id": "lobbysignal",
+  "synthetic": true,
+  "title": "Synthetic Filing Flow Test",
+  "script": "A fictional policy filing workflow moves through a generated local source card, synthetic counts, a chart, a timeline, a comparison, and a safe editorial fallback. It contains no current political claim.",
+  "source_visual": {
+    "kind": "generated_local",
+    "label": "LOCAL FILING NOTE",
+    "body": "Synthetic fixture only. A fictional review queue changes from 12 items to 5 after a made-up process revision."
+  },
+  "audio": {
+    "music_cue": "synthetic_neutral_bed",
+    "sfx_events": [
+      {"at": 7.0, "kind": "paper_tick"},
+      {"at": 28.0, "kind": "soft_hit"}
+    ]
+  },
+  "long": {
+    "duration": 42,
+    "scenes": [
+      {"id":"ls-long-source","narration":"This local filing note is synthetic and exists only to exercise the source browser scene safely.","purpose":"evidence","scene_type":"source_browser","headline":"LOCAL FILING NOTE","subheadline":"Generated fixture, not a real filing","source_ids":[],"asset_ids":["source-card"],"motion":"slow_zoom","emphasis":["synthetic","local"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{}},
+      {"id":"ls-long-stat","narration":"The fictional review queue drops from twelve items to five after a made up process revision.","purpose":"metric","scene_type":"stat","headline":"QUEUE SHRINKS","subheadline":"Synthetic process metric","source_ids":[],"asset_ids":[],"motion":"punch_in","emphasis":["5 items"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"value":5,"suffix":" items","label":"fictional review queue"}},
+      {"id":"ls-long-chart","narration":"A generated chart shows a purely fictional sequence of twelve, ten, seven, and five pending items.","purpose":"explain","scene_type":"chart","headline":"FICTIONAL REVIEW TREND","subheadline":"Generated local values","source_ids":[],"asset_ids":[],"motion":"push_up","emphasis":["trend"],"transition":"slide","fallback_scene_type":"fallback_editorial","data":{"labels":["Draft","Review","Revision","Close"],"values":[12,10,7,5]}},
+      {"id":"ls-long-timeline","narration":"The timeline walks through draft, internal review, fictional revision, and close without referencing a real government action.","purpose":"sequence","scene_type":"timeline","headline":"SYNTHETIC WORKFLOW","subheadline":"Four made-up stages","source_ids":[],"asset_ids":[],"motion":"push_left","emphasis":["workflow"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{"items":["Draft","Internal review","Revision","Close"]}},
+      {"id":"ls-long-comparison","narration":"The comparison places the twelve item fictional queue beside the five item fictional queue after revision.","purpose":"comparison","scene_type":"comparison","headline":"BEFORE VS AFTER","subheadline":"Synthetic process comparison","source_ids":[],"asset_ids":[],"motion":"parallax","emphasis":["before","after"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"left":"12 pending items","right":"5 pending items"}},
+      {"id":"ls-long-fallback","narration":"The final fallback demonstrates a neutral editorial graphic when no source visual should be fabricated.","purpose":"fallback","scene_type":"fallback_editorial","headline":"NEUTRAL SAFE FALLBACK","subheadline":"No fabricated source image","source_ids":[],"asset_ids":["fallback-card"],"motion":"fade","emphasis":["neutral"],"transition":"cut","fallback_scene_type":"fallback_editorial","data":{}}
+    ],
+    "captions": [
+      {"start":0,"end":7,"text":"This local filing note is synthetic and exists only to exercise the source browser scene safely."},
+      {"start":7,"end":14,"text":"The fictional review queue drops from twelve items to five after a made up process revision."},
+      {"start":14,"end":21,"text":"A generated chart shows a purely fictional sequence of twelve, ten, seven, and five pending items."},
+      {"start":21,"end":28,"text":"The timeline walks through draft, internal review, fictional revision, and close without referencing a real government action."},
+      {"start":28,"end":35,"text":"The comparison places the twelve item fictional queue beside the five item fictional queue after revision."},
+      {"start":35,"end":42,"text":"The final fallback demonstrates a neutral editorial graphic when no source visual should be fabricated."}
+    ]
+  },
+  "short": {
+    "duration": 36,
+    "scenes": [
+      {"id":"ls-short-source","narration":"This generated filing card is local and carries no real political claim.","purpose":"evidence","scene_type":"source_browser","headline":"LOCAL FILING CARD","subheadline":"Synthetic fixture","source_ids":[],"asset_ids":["source-card"],"motion":"punch_in","emphasis":["local"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{}},
+      {"id":"ls-short-stat","narration":"The fake review queue moves from twelve items to five.","purpose":"metric","scene_type":"stat","headline":"12 TO 5 ITEMS","subheadline":"Synthetic only","source_ids":[],"asset_ids":[],"motion":"punch_in","emphasis":["5"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"value":5,"suffix":" items","label":"fictional review queue"}},
+      {"id":"ls-short-chart","narration":"The chart checks a clean vertical data scene with generated values.","purpose":"explain","scene_type":"chart","headline":"QUEUE TREND","subheadline":"Local values only","source_ids":[],"asset_ids":[],"motion":"push_up","emphasis":["trend"],"transition":"slide","fallback_scene_type":"fallback_editorial","data":{"labels":["D","R","V","C"],"values":[12,10,7,5]}},
+      {"id":"ls-short-timeline","narration":"The compact timeline checks phone first sequencing without a live story.","purpose":"sequence","scene_type":"timeline","headline":"FOUR STAGES","subheadline":"Synthetic workflow","source_ids":[],"asset_ids":[],"motion":"push_left","emphasis":["stages"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{"items":["Draft","Review","Revise","Close"]}},
+      {"id":"ls-short-comparison","narration":"The comparison puts the fictional before and after queues side by side.","purpose":"comparison","scene_type":"comparison","headline":"BEFORE VS AFTER","subheadline":"Synthetic comparison","source_ids":[],"asset_ids":[],"motion":"parallax","emphasis":["after"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"left":"12 items","right":"5 items"}},
+      {"id":"ls-short-fallback","narration":"The neutral fallback closes the Short without inventing a source.","purpose":"fallback","scene_type":"fallback_editorial","headline":"SAFE FALLBACK","subheadline":"No invented source","source_ids":[],"asset_ids":["fallback-card"],"motion":"fade","emphasis":["safe"],"transition":"cut","fallback_scene_type":"fallback_editorial","data":{}}
+    ],
+    "captions": [
+      {"start":0,"end":6,"text":"This generated filing card is local and carries no real political claim."},
+      {"start":6,"end":12,"text":"The fake review queue moves from twelve items to five."},
+      {"start":12,"end":18,"text":"The chart checks a clean vertical data scene with generated values."},
+      {"start":18,"end":24,"text":"The compact timeline checks phone first sequencing without a live story."},
+      {"start":24,"end":30,"text":"The comparison puts the fictional before and after queues side by side."},
+      {"start":30,"end":36,"text":"The neutral fallback closes the Short without inventing a source."}
+    ]
+  }
+}
