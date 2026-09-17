@@ -42,6 +42,11 @@ class ConfiguredTTS:
         )
         return track.path
 
+    def release(self) -> None:
+        release = getattr(self.backend, "release", None)
+        if callable(release):
+            release()
+
 
 def select_tts_backend(name: str, **deps):
     normalized = name.strip().lower()
