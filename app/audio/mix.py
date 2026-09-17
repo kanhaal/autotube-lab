@@ -19,6 +19,7 @@ def build_audio_filter_graph(
     target_lufs: float = -14.0,
     true_peak: float = -1.5,
     sfx_delays: tuple[int, ...] | None = None,
+    sfx_volumes: tuple[float, ...] | None = None,
 ) -> str:
     loudnorm = f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11"
     if not has_music and sfx_count == 0:
@@ -37,10 +38,12 @@ def build_audio_filter_graph(
         next_index = 2
 
     delays = sfx_delays or tuple(0 for _ in range(sfx_count))
+    volumes = sfx_volumes or tuple(0.35 for _ in range(sfx_count))
     for index in range(sfx_count):
         delay = delays[index] if index < len(delays) else 0
+        volume = max(0.0, volumes[index] if index < len(volumes) else 0.35)
         parts.append(
-            f"[{next_index + index}:a]adelay={delay}|{delay},volume=0.35[sfx{index}]"
+            f"[{next_index + index}:a]adelay={delay}|{delay},volume={volume:g}[sfx{index}]"
         )
         inputs.append(f"[sfx{index}]")
 
@@ -89,6 +92,7 @@ def mix_episode_audio(
         target_lufs=target_lufs,
         true_peak=true_peak,
         sfx_delays=tuple(event.start_ms for event in normalized_events),
+        sfx_volumes=tuple(event.volume for event in normalized_events),
     )
     command += ["-filter_complex", graph, "-map", "[out]"]
     if out.suffix.lower() == ".wav":
