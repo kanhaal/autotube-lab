@@ -5,7 +5,11 @@ from pathlib import Path
 from app.assets.fallbacks import render_fallback_card
 from app.assets.manifest import write_asset_manifest
 from app.assets.models import AssetManifest, AssetRecord
-from app.assets.resolver import AssetRequest, resolve_scene_assets
+from app.assets.resolver import (
+    VERIFIED_SOURCE_SCENE_TYPES,
+    AssetRequest,
+    resolve_scene_assets,
+)
 from app.assets.screenshots import ScreenshotCapture
 
 
@@ -75,18 +79,19 @@ def prepare_assets(
                     asset_dir / f"fallback-{scene.id}.png",
                 )
             )
-        elif scene.scene_type == "source_browser" and scene.id not in requested_scene_ids:
+        elif scene.scene_type in VERIFIED_SOURCE_SCENE_TYPES and scene.id not in requested_scene_ids:
             if bool(scene.data.get("asset_required", False)):
                 raise AssetPreparationError(
                     f"required asset for scene {scene.id} did not resolve to a verified source"
                 )
-            records.append(
-                render_fallback_card(
-                    channel_cfg,
-                    scene,
-                    asset_dir / f"fallback-{scene.id}.png",
+            if scene.scene_type == "source_browser":
+                records.append(
+                    render_fallback_card(
+                        channel_cfg,
+                        scene,
+                        asset_dir / f"fallback-{scene.id}.png",
+                    )
                 )
-            )
 
     manifest = AssetManifest(records=tuple(records))
     write_asset_manifest(manifest.records, root / "asset-manifest.json")
