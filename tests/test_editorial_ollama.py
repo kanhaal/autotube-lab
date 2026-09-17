@@ -71,4 +71,4 @@ def test_json_client_fails_after_one_repair(monkeypatch):
     except OllamaJsonError:
         return
 
-    assert False, "expected OllamaJsonError"
+    raise AssertionError("expected OllamaJsonError")
