@@ -1,11 +1,7 @@
 import {describe, expect, it} from 'vitest';
 
-import {
-  SCENE_REGISTRY,
-  resolveSceneAsset,
-  sceneComponentFor,
-  scenePresentationStyle,
-} from './SceneRenderer';
+import {SCENE_REGISTRY, sceneComponentFor} from './SceneRenderer';
+import {resolveSceneAsset, scenePresentationStyle} from './presentation';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
 const EXPECTED_SCENES = [
