@@ -39,12 +39,13 @@ def prepare_assets(
     scene_by_id = {scene.id: scene for scene in scene_plan.scenes}
 
     records: list[AssetRecord] = []
-    requested_scene_ids: set[str] = set()
-    requests = _deduplicate_requests(resolve_scene_assets(scene_plan, packet))
+    resolved_requests = resolve_scene_assets(scene_plan, packet)
+    requested_scene_ids = {
+        request.scene_id for request in resolved_requests if request.scene_id
+    }
+    requests = _deduplicate_requests(resolved_requests)
 
     for request in requests:
-        if request.scene_id:
-            requested_scene_ids.add(request.scene_id)
         try:
             records.append(capture.capture(request, asset_dir))
         except Exception as exc:  # noqa: BLE001 - adapter boundary converts optional capture failure
