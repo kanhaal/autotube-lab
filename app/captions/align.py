@@ -4,7 +4,7 @@ import re
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from app.captions.models import CaptionCue
+from app.captions.models import CaptionCue, CaptionWord
 
 
 class CaptionAlignmentError(RuntimeError):
@@ -55,25 +55,42 @@ class FasterWhisperTranscriber:
 
 def _to_cues(words) -> tuple[CaptionCue, ...]:
     cues: list[CaptionCue] = []
-    current = []
+    current: list[CaptionWord] = []
     start = None
     end = None
     for word in words:
         text = str(word.word).strip()
         if not text:
             continue
+        timing = CaptionWord(text=text, start=float(word.start), end=float(word.end))
         if start is None:
-            start = float(word.start)
-        end = float(word.end)
-        current.append(text)
+            start = timing.start
+        end = timing.end
+        current.append(timing)
         punctuation_break = text.endswith((".", "?", "!", ";", ":")) and len(current) >= 2
         if len(current) >= 7 or punctuation_break:
-            cues.append(CaptionCue(start, end, " ".join(current), tuple(current)))
+            cues.append(
+                CaptionCue(
+                    start,
+                    end,
+                    " ".join(item.text for item in current),
+                    tuple(item.text for item in current),
+                    tuple(current),
+                )
+            )
             current = []
             start = None
             end = None
     if current and start is not None and end is not None:
-        cues.append(CaptionCue(start, end, " ".join(current), tuple(current)))
+        cues.append(
+            CaptionCue(
+                start,
+                end,
+                " ".join(item.text for item in current),
+                tuple(item.text for item in current),
+                tuple(current),
+            )
+        )
     return tuple(cues)
 
 
