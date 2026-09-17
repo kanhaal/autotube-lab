@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from app.assets.models import AssetManifest, AssetRecord
+from app.assets.models import AssetManifest
 
 
 def sha256_file(path: Path) -> str:
