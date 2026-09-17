@@ -16,9 +16,17 @@ jobs:
       - run: pytest -q
       - run: python -m compileall -q app
       - run: ruff check app tests
+      - name: Generate video lockfile
+        working-directory: video
+        run: npm install --package-lock-only --ignore-scripts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-package-lock
+          path: video/package-lock.json
+          retention-days: 1
       - name: Install video dependencies
         working-directory: video
-        run: npm install --package-lock=false
+        run: npm ci
       - name: Test video project
         working-directory: video
         run: npm test
