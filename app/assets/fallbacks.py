@@ -83,4 +83,5 @@ def render_fallback_card(channel_cfg: dict, scene, out: Path) -> AssetRecord:
         license_note="original AutoTube generated graphic",
         sha256=sha256_file(target),
         captured_at=datetime.now(timezone.utc),
+        scene_id=scene.id,
     )
