@@ -10,7 +10,11 @@ import {
 
 import {CaptionTrack} from '../components/CaptionTrack';
 import {SceneRenderer} from '../scenes/SceneRenderer';
-import {resolveSceneAsset, scenePresentationStyle} from '../scenes/presentation';
+import {
+  resolveSceneAsset,
+  scenePresentationStyle,
+  sceneSupportsVerifiedAsset,
+} from '../scenes/presentation';
 import type {AssetRecordV1, RenderPackageV1, SceneSpecV1} from '../types';
 import type {ChannelTheme} from '../themes/types';
 import {sceneFrameWindows} from './sceneTiming';
@@ -26,7 +30,7 @@ const SceneSequence = ({
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const sourceAsset = scene.scene_type === 'source_browser'
+  const sourceAsset = sceneSupportsVerifiedAsset(scene)
     ? resolveSceneAsset(scene, assets)
     : undefined;
 
