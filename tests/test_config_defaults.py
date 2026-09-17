@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 
@@ -15,6 +16,12 @@ def test_env_example_documents_professional_media_defaults():
     }
     for line in expected:
         assert line in text
+
+
+def test_voice_extra_pins_setuptools_below_perth_breaking_version():
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    voice = pyproject["project"]["optional-dependencies"]["voice"]
+    assert "setuptools<81" in voice
 
 
 def test_windows_setup_checks_local_media_dependencies_without_downloading_models():
