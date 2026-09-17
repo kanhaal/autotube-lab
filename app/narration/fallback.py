@@ -26,3 +26,9 @@ class FallbackTTS:
                     f"TTS failed for {primary_name} ({primary_exc}) and "
                     f"{fallback_name} ({fallback_exc})"
                 ) from fallback_exc
+
+    def release(self) -> None:
+        for backend in (self.primary, self.fallback):
+            release = getattr(backend, "release", None)
+            if callable(release):
+                release()
