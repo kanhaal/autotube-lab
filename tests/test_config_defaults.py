@@ -56,7 +56,6 @@ def test_caption_transcriber_defaults_can_be_overridden_by_environment(monkeypat
 
 
 def test_cli_tts_backend_can_be_overridden_by_environment(monkeypatch):
-    import app.narration.backend as backend
     from app.cli import _build_channel_tts
 
     selected = []
