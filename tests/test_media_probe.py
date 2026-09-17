@@ -33,6 +33,26 @@ def _make_synthetic_mp4(path: Path) -> Path:
     return path
 
 
+def _make_synthetic_wav(path: Path) -> Path:
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=48000:duration=1",
+            "-c:a",
+            "pcm_s16le",
+            str(path),
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return path
+
+
 def test_probe_media_reports_complete_video_and_audio_metadata(tmp_path: Path):
     from app.rendering.ffmpeg import probe_media
 
@@ -48,6 +68,23 @@ def test_probe_media_reports_complete_video_and_audio_metadata(tmp_path: Path):
     assert 0.9 <= probe.video_duration <= 1.1
     assert 0.9 <= probe.audio_duration <= 1.1
     assert probe.file_size == video.stat().st_size
+
+
+def test_probe_media_handles_audio_only_files_without_fake_video_duration(tmp_path: Path):
+    from app.rendering.ffmpeg import probe_media
+
+    audio = _make_synthetic_wav(tmp_path / "probe.wav")
+    probe = probe_media(audio)
+
+    assert probe.video_codec is None
+    assert probe.width is None
+    assert probe.height is None
+    assert probe.frame_rate == 0.0
+    assert probe.video_duration == 0.0
+    assert probe.audio_codec == "pcm_s16le"
+    assert 0.9 <= probe.format_duration <= 1.1
+    assert 0.9 <= probe.audio_duration <= 1.1
+    assert probe.file_size == audio.stat().st_size
 
 
 def test_probe_video_delegates_to_complete_probe(tmp_path: Path):
