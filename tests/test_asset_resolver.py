@@ -42,6 +42,22 @@ def test_source_browser_resolves_only_verified_research_url():
     assert requests[0].required is False
 
 
+def test_source_browser_can_resolve_phase1_source_id_to_verified_url():
+    scene = SceneSpec(
+        id="s1",
+        narration="Beta confirmed the release.",
+        purpose="show corroboration",
+        scene_type="source_browser",
+        source_ids=("source_2",),
+    )
+    plan = ScenePlan(channel_id="kernelrush", format="longform", scenes=(scene,))
+
+    requests = resolve_scene_assets(plan, packet())
+
+    assert requests[0].source_url == "https://example.com/beta"
+    assert requests[0].source_name == "Official Beta"
+
+
 def test_source_browser_rejects_url_not_in_research_packet():
     scene = SceneSpec(
         id="s1",
