@@ -6,11 +6,15 @@ import type {MotionName, TransitionName} from '../motion';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
 const imageKinds = new Set(['image', 'screenshot', 'source_screenshot', 'fallback_card']);
+const verifiedAssetSceneTypes = new Set(['source_browser', 'device', 'github', 'game_store']);
 
 const dataString = (scene: SceneSpecV1, key: string): string => {
   const value = scene.data[key];
   return typeof value === 'string' ? value.trim() : '';
 };
+
+export const sceneSupportsVerifiedAsset = (scene: SceneSpecV1): boolean =>
+  verifiedAssetSceneTypes.has(scene.scene_type);
 
 export const resolveSceneAsset = (
   scene: SceneSpecV1,
