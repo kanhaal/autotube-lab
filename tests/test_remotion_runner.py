@@ -18,7 +18,16 @@ def test_remotion_command_is_argument_safe(tmp_path: Path):
     assert f"--props={package_dir.resolve() / 'remotion-props.json'}" in command
 
 
-def test_remotion_runner_uses_shell_false(monkeypatch, tmp_path: Path):
+def test_remotion_runner_resolves_default_npx_shim(monkeypatch):
+    resolved = r"C:\\Program Files\\nodejs\\npx.cmd"
+    monkeypatch.setattr("app.rendering.runner.shutil.which", lambda name: resolved if name == "npx" else None)
+
+    runner = RemotionRunner(video_dir=Path("video"))
+
+    assert runner.npx == resolved
+
+
+def test_remotion_runner_uses_shell_false_and_utf8_decoding(monkeypatch, tmp_path: Path):
     package_dir = tmp_path / "package"
     package_dir.mkdir()
     out = tmp_path / "episode.mp4"
@@ -39,5 +48,8 @@ def test_remotion_runner_uses_shell_false(monkeypatch, tmp_path: Path):
     result = runner.render(package_dir, "KernelRushLong", out)
 
     assert result == out.resolve()
-    assert calls[0][1]["shell"] is False
-    assert calls[0][1]["cwd"] == Path("video").resolve()
+    kwargs = calls[0][1]
+    assert kwargs["shell"] is False
+    assert kwargs["cwd"] == Path("video").resolve()
+    assert kwargs["encoding"] == "utf-8"
+    assert kwargs["errors"] == "replace"
