@@ -53,4 +53,33 @@ describe('enhanced Short presentation', () => {
     };
     expect(activeShortVisual(productPkg, 0)?.asset?.local_path).toBe('images/source-1.png');
   });
+
+  it('prefers the asset explicitly captured for the active scene over a same-purpose asset', () => {
+    const boundPkg: RenderPackageV1 = {
+      ...pkg,
+      scenes: {
+        ...pkg.scenes,
+        scenes: [{...pkg.scenes.scenes[0], data: {}}],
+      },
+      assets: {
+        schema_version: '1',
+        records: [
+          {
+            id: 'wrong', kind: 'source_screenshot', local_path: 'images/wrong.png',
+            source_url: 'https://example.com/wrong', source_name: 'Wrong', usage: 'evidence',
+            license_note: 'source screenshot', sha256: 'wrong', captured_at: '2026-09-17T00:00:00+00:00',
+            scene_id: 's2',
+          },
+          {
+            id: 'right', kind: 'source_screenshot', local_path: 'images/right.png',
+            source_url: 'https://example.com/right', source_name: 'Right', usage: 'evidence',
+            license_note: 'source screenshot', sha256: 'right', captured_at: '2026-09-17T00:00:00+00:00',
+            scene_id: 's1',
+          },
+        ],
+      },
+    };
+
+    expect(activeShortVisual(boundPkg, 0)?.asset?.local_path).toBe('images/right.png');
+  });
 });
