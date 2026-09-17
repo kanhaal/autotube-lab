@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 
 
@@ -61,3 +62,13 @@ class KokoroTTS:
         writer = self.writer or self._default_writer
         writer(out, chunks, 24000)
         return out
+
+    def release(self) -> None:
+        self._pipeline = None
+        gc.collect()
+        try:
+            import torch
+        except ImportError:
+            return
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
