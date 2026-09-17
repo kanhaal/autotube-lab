@@ -22,7 +22,11 @@ python -m venv .venv
 
 Push-Location video
 try {
-    npm ci
+    if (Test-Path "package-lock.json") {
+        npm ci
+    } else {
+        npm install --no-audit --no-fund
+    }
 } finally {
     Pop-Location
 }
