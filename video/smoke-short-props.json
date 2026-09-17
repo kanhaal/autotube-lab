@@ -1,0 +1,134 @@
+{
+  "pkg": {
+    "root": ".",
+    "manifest": {
+      "schema_version": "1",
+      "format": "short",
+      "channel_id": "kernelrush",
+      "channel_name": "KernelRush",
+      "title": "Short Smoke Render",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "duration_source": "audio",
+      "audio_path": "",
+      "theme": {}
+    },
+    "script": {
+      "title": "Short Smoke Render",
+      "script": "A verified native vertical smoke render for the professional Shorts pipeline."
+    },
+    "scenes": {
+      "schema_version": "1",
+      "channel_id": "kernelrush",
+      "format": "short",
+      "scenes": [
+        {
+          "id": "short-1",
+          "narration": "A verified native vertical smoke render.",
+          "purpose": "hook",
+          "scene_type": "hook",
+          "headline": "THIS IS NATIVE VERTICAL",
+          "subheadline": "Not a center crop",
+          "source_ids": ["source_1"],
+          "asset_ids": [],
+          "motion": "snap",
+          "emphasis": ["native", "vertical"],
+          "transition": "cut",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {}
+        },
+        {
+          "id": "short-2",
+          "narration": "The layout is designed for a phone screen.",
+          "purpose": "context",
+          "scene_type": "headline",
+          "headline": "PHONE-FIRST LAYOUT",
+          "subheadline": "Safe space for captions and app chrome",
+          "source_ids": ["source_1"],
+          "asset_ids": [],
+          "motion": "snap",
+          "emphasis": ["safe areas"],
+          "transition": "cut",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {}
+        },
+        {
+          "id": "short-3",
+          "narration": "The format is guarded at thirty to forty-five seconds.",
+          "purpose": "evidence",
+          "scene_type": "stat",
+          "headline": "DURATION IS GUARDED",
+          "subheadline": "Short-form contract",
+          "source_ids": ["source_1"],
+          "asset_ids": [],
+          "motion": "snap",
+          "emphasis": ["30-45 seconds"],
+          "transition": "cut",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {"value": 45, "suffix": "s", "label": "hard upper bound"}
+        },
+        {
+          "id": "short-4",
+          "narration": "Each Short gets its own semantic scene plan.",
+          "purpose": "explain",
+          "scene_type": "list",
+          "headline": "ITS OWN STORY BEATS",
+          "subheadline": "Built for fast vertical pacing",
+          "source_ids": ["source_1"],
+          "asset_ids": [],
+          "motion": "snap",
+          "emphasis": ["hook", "context", "payoff"],
+          "transition": "cut",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {"items": ["Hook fast", "Prove the point", "Land the payoff"]}
+        },
+        {
+          "id": "short-5",
+          "narration": "That keeps the Short separate from the long-form episode.",
+          "purpose": "comparison",
+          "scene_type": "comparison",
+          "headline": "NOT A RESIZED LONG VIDEO",
+          "subheadline": "Different composition, same verified evidence",
+          "source_ids": ["source_1"],
+          "asset_ids": [],
+          "motion": "snap",
+          "emphasis": ["separate composition"],
+          "transition": "cut",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {"left": "Center-cropped long-form", "right": "Native 9:16 Short"}
+        },
+        {
+          "id": "short-6",
+          "narration": "The vertical renderer is ready for the production pipeline.",
+          "purpose": "payoff",
+          "scene_type": "conclusion",
+          "headline": "VERTICAL RENDERER ONLINE",
+          "subheadline": "Ready for narration, captions, and assets",
+          "source_ids": ["source_1"],
+          "asset_ids": [],
+          "motion": "snap",
+          "emphasis": ["renderer", "online"],
+          "transition": "cut",
+          "fallback_scene_type": "fallback_editorial",
+          "data": {}
+        }
+      ]
+    },
+    "captions": {
+      "schema_version": "1",
+      "cues": [
+        {
+          "start": 0,
+          "end": 36,
+          "text": "Native vertical Short smoke test.",
+          "words": ["Native", "vertical", "Short", "smoke", "test."]
+        }
+      ]
+    },
+    "assets": {
+      "schema_version": "1",
+      "records": []
+    }
+  }
+}
