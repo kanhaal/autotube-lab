@@ -45,7 +45,10 @@ AUTOTUBE_CAPTION_MODEL=small.en
 AUTOTUBE_CAPTION_DEVICE=cuda
 AUTOTUBE_CAPTION_COMPUTE_TYPE=float16
 AUTOTUBE_AUDIO_LIBRARY=config/audio/library.yml
+AUTOTUBE_VISUAL_CRITIC=0
 ```
+
+`AUTOTUBE_VISUAL_CRITIC=0` keeps the optional local visual critic disabled by default. Set it to `1` only when you want the post-QA contact-sheet/thumbnail review; deterministic QA remains authoritative either way.
 
 Put the OAuth Desktop client JSON at `client_secret.json`. It is gitignored.
 
