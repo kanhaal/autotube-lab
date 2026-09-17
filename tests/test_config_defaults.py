@@ -29,3 +29,49 @@ def test_scheduled_task_remains_render_only_during_supervised_rollout():
     text = Path("scripts/install_task.ps1").read_text(encoding="utf-8")
     assert "run-daily --render" in text
     assert "run-daily --live" not in text
+
+
+def test_caption_transcriber_defaults_can_be_overridden_by_environment(monkeypatch):
+    from app.captions.align import FasterWhisperTranscriber
+
+    monkeypatch.setenv("AUTOTUBE_CAPTION_MODEL", "medium.en")
+    monkeypatch.setenv("AUTOTUBE_CAPTION_DEVICE", "cpu")
+    monkeypatch.setenv("AUTOTUBE_CAPTION_COMPUTE_TYPE", "int8")
+
+    transcriber = FasterWhisperTranscriber()
+
+    assert transcriber.model_size == "medium.en"
+    assert transcriber.device == "cpu"
+    assert transcriber.compute_type == "int8"
+
+
+def test_cli_tts_backend_can_be_overridden_by_environment(monkeypatch):
+    import app.narration.backend as backend
+    from app.cli import _build_channel_tts
+
+    selected = []
+
+    class FakeBackend:
+        name = "fake"
+
+        def synthesize(self, text, out, voice_profile):
+            return out
+
+    def select(name, **deps):
+        selected.append(name)
+        return FakeBackend()
+
+    monkeypatch.setattr(backend, "select_tts_backend", select)
+    monkeypatch.setenv("AUTOTUBE_TTS_BACKEND", "kokoro")
+
+    _build_channel_tts(
+        {
+            "voice": {
+                "profile": "default",
+                "backend": "chatterbox",
+                "fallback_backend": "kokoro",
+            }
+        }
+    )
+
+    assert selected[0] == "kokoro"
