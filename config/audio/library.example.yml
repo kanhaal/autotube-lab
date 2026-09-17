@@ -1,0 +1,15 @@
+assets:
+  - id: kernelrush-ambient-example
+    path: ../../assets/audio/kernelrush-ambient.wav
+    kind: music
+    channels: [kernelrush]
+    moods: [analytical]
+    license_note: "Replace with a locally owned or properly licensed track and record its license here."
+    source_url: null
+  - id: lobbysignal-energy-example
+    path: ../../assets/audio/lobbysignal-energy.wav
+    kind: music
+    channels: [lobbysignal]
+    moods: [energetic]
+    license_note: "Replace with a locally owned or properly licensed track and record its license here."
+    source_url: null
