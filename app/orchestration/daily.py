@@ -33,6 +33,21 @@ def build_job_key(channel_id, run_date, dry_run=True, has_tts=False, has_publish
     return f"{run_date.isoformat()}:{channel_id}:{mode}"
 
 
+def _source_description(summary: str, packet: dict) -> str:
+    lines = []
+    seen = set()
+    for source in packet.get("sources", []):
+        url = str(source.get("url", "")).strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        name = str(source.get("source_name", "")).strip()
+        lines.append(f"- {name}: {url}" if name else f"- {url}")
+    if not lines:
+        return summary
+    return summary.rstrip() + "\n\nSources:\n" + "\n".join(lines)
+
+
 def _finish_blocked_production(repo, job_key, channel_id, niche, production):
     issues = [
         {"code": issue.code, "message": issue.message, "fatal": issue.fatal}
@@ -261,10 +276,19 @@ def run_channel(
                 result["video"] = str(video)
 
         if video is not None and publisher and not dry_run:
+            if mode == "professional" and not repo.renderer_approved("professional"):
+                result["status"] = "blocked_publish"
+                result["publish_blocked"] = "renderer_unapproved"
+                repo.finish_job(
+                    job_key,
+                    "blocked_publish",
+                    json.dumps({"reason": "renderer_unapproved"}),
+                )
+                return result
+
             meta = {
                 "title": candidate.title,
-                "description": candidate.summary
-                + "\n\nSources are listed in the research packet used by AutoTube Lab.",
+                "description": _source_description(candidate.summary, packet),
                 "tags": cfg["niches"],
             }
             if publish_at:
