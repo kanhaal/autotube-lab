@@ -58,6 +58,25 @@ def test_source_browser_can_resolve_phase1_source_id_to_verified_url():
     assert requests[0].source_name == "Official Beta"
 
 
+@pytest.mark.parametrize("scene_type", ["device", "github", "game_store"])
+def test_product_scene_resolves_verified_source_visual(scene_type):
+    scene = SceneSpec(
+        id="s1",
+        narration="Alpha launched.",
+        purpose=f"show verified {scene_type} context",
+        scene_type=scene_type,
+        source_ids=("source_1",),
+    )
+    plan = ScenePlan(channel_id="kernelrush", format="longform", scenes=(scene,))
+
+    requests = resolve_scene_assets(plan, packet())
+
+    assert len(requests) == 1
+    assert requests[0].scene_id == "s1"
+    assert requests[0].source_url == "https://example.com/alpha"
+    assert requests[0].kind == "source_screenshot"
+
+
 def test_source_browser_rejects_url_not_in_research_packet():
     scene = SceneSpec(
         id="s1",

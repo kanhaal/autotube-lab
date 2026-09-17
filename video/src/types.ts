@@ -49,11 +49,18 @@ export type ScenePlanV1 = {
   scenes: SceneSpecV1[];
 };
 
+export type CaptionWordTimingV1 = {
+  text: string;
+  start: number;
+  end: number;
+};
+
 export type CaptionCueV1 = {
   start: number;
   end: number;
   text: string;
   words: string[];
+  word_timings?: CaptionWordTimingV1[];
 };
 
 export type CaptionPayloadV1 = {
@@ -71,6 +78,7 @@ export type AssetRecordV1 = {
   license_note: string | null;
   sha256: string;
   captured_at: string;
+  scene_id?: string | null;
 };
 
 export type AssetManifestV1 = {

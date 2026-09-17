@@ -16,7 +16,7 @@
     },
     "script": {
       "title": "Smoke Render",
-      "script": "Renderer smoke test."
+      "script": "Verified source smoke test."
     },
     "scenes": {
       "schema_version": "1",
@@ -24,19 +24,19 @@
       "format": "longform",
       "scenes": [
         {
-          "id": "smoke-1",
-          "narration": "Renderer smoke test.",
-          "purpose": "Smoke test",
-          "scene_type": "hook",
-          "headline": "Professional renderer online",
-          "subheadline": "One-frame CI smoke test",
-          "source_ids": [],
-          "asset_ids": [],
-          "motion": "subtle_push",
-          "emphasis": ["renderer", "online"],
+          "id": "smoke-source",
+          "narration": "Verified source smoke test.",
+          "purpose": "evidence",
+          "scene_type": "source_browser",
+          "headline": "Verified source asset online",
+          "subheadline": "Real image path exercised by CI",
+          "source_ids": ["source_1"],
+          "asset_ids": ["smoke-source"],
+          "motion": "none",
+          "emphasis": ["verified", "source"],
           "transition": "cut",
           "fallback_scene_type": "fallback_editorial",
-          "data": {}
+          "data": {"source_url": "https://example.com/verified-source"}
         }
       ]
     },
@@ -46,14 +46,27 @@
         {
           "start": 0,
           "end": 1,
-          "text": "Renderer smoke test.",
-          "words": ["Renderer", "smoke", "test."]
+          "text": "Verified source smoke test.",
+          "words": ["Verified", "source", "smoke", "test."]
         }
       ]
     },
     "assets": {
       "schema_version": "1",
-      "records": []
+      "records": [
+        {
+          "id": "smoke-source",
+          "kind": "source_screenshot",
+          "local_path": "smoke-source.svg",
+          "source_url": "https://example.com/verified-source",
+          "source_name": "Verified Source Smoke Fixture",
+          "usage": "evidence",
+          "license_note": "original test fixture",
+          "sha256": "smoke-fixture",
+          "captured_at": "2026-09-17T00:00:00+00:00",
+          "scene_id": "smoke-source"
+        }
+      ]
     }
   }
 }

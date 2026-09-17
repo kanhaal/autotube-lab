@@ -34,7 +34,7 @@ def test_renderer_mode_rejects_unknown(monkeypatch):
         raise AssertionError("expected ValueError")
 
 
-def test_optional_short_failure_keeps_valid_long_render(tmp_path):
+def test_optional_short_failure_keeps_valid_long_render(tmp_path, monkeypatch):
     class FakeTTS:
         def synthesize(self, text, out):
             Path(out).write_bytes(b"wav")
@@ -65,6 +65,13 @@ def test_optional_short_failure_keeps_valid_long_render(tmp_path):
     def short_failure(*args, **kwargs):
         raise RuntimeError("optional short render failed")
 
+    def fake_mix(narration, music, sfx_events, out, **kwargs):
+        path = Path(out)
+        path.write_bytes(Path(narration).read_bytes())
+        return path
+
+    monkeypatch.setattr("app.rendering.pipeline.mix_episode_audio", fake_mix)
+
     outputs = render_professional_episode(
         channel_cfg={"id": "kernelrush", "name": "KernelRush", "brand": {}},
         title="Verified story",
@@ -87,4 +94,6 @@ def test_optional_short_failure_keeps_valid_long_render(tmp_path):
     assert outputs.long_video.is_file()
     assert outputs.short_video is None
     assert outputs.short_error == "optional short render failed"
+    assert outputs.audio == tmp_path / "master.wav"
+    assert outputs.audio.is_file()
     assert len(outputs.thumbnails) == 5
