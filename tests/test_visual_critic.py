@@ -37,10 +37,10 @@ def test_contact_sheet_samples_evenly_spaced_video_times(monkeypatch, tmp_path: 
 class _FakeLlm:
     def __init__(self, result: dict):
         self.result = result
-        self.calls: list[tuple[str, dict]] = []
+        self.calls: list[tuple[str, dict, dict]] = []
 
     def generate_json(self, system_prompt: str, payload: dict, **kwargs):
-        self.calls.append((system_prompt, payload))
+        self.calls.append((system_prompt, payload, kwargs))
         return self.result
 
 
@@ -65,6 +65,8 @@ def test_visual_critic_accepts_only_structured_allowed_issue_codes(tmp_path: Pat
     assert result.issues[0].code == "clutter"
     assert result.targeted_changes == ("Reduce secondary text in scene 4",)
     assert llm.calls
+    image_paths = llm.calls[0][2]["image_paths"]
+    assert image_paths == (contact, thumbnail)
 
 
 def test_visual_critic_rejects_unregistered_issue_code(tmp_path: Path):
