@@ -15,6 +15,9 @@ $fixtures = @(
 foreach ($fixture in $fixtures) {
     Write-Host "Rendering synthetic sample: $fixture"
     & $python scripts/render_sample_story.py $fixture --output output/samples
+    if ($LASTEXITCODE -ne 0) {
+        throw "Sample render failed for $fixture with exit code $LASTEXITCODE."
+    }
 }
 
 Write-Host "Sample renders complete. Review output/samples/kernelrush and output/samples/lobbysignal before approving the professional renderer."
