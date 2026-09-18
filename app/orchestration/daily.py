@@ -10,6 +10,7 @@ from app.config import channel_config
 from app.domain.models import Publication
 from app.experiments.allocation import choose_niche
 from app.research.live import research_candidate
+from app.rendering.history import create_render_run
 from app.scoring.trends import deduplicate_candidates, score_candidate
 from app.scripting.engine import TemplateScriptEngine
 from app.validation.facts import validate_script
@@ -139,8 +140,24 @@ def run_channel(
             return {"status": "blocked_factcheck", "reason": "insufficient corroboration"}
 
         episode = f"{today.isoformat()}-{channel_id}-{niche}"
-        directory = Path(output_dir) / episode
-        directory.mkdir(parents=True, exist_ok=True)
+        render_run = create_render_run(Path(output_dir), channel_id)
+        directory = render_run.directory
+        (directory / "run-meta.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "1",
+                    "run_id": render_run.run_id,
+                    "episode": episode,
+                    "channel_id": channel_id,
+                    "niche": niche,
+                    "title": candidate.title,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         (directory / "research.json").write_text(
             json.dumps(packet, ensure_ascii=False, indent=2),
             encoding="utf-8",
