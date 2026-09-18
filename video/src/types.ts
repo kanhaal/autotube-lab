@@ -117,6 +117,8 @@ export type SceneSpecV1 = {
   camera?: CameraDirectionV1;
   micro_beats?: MicroBeatV1[];
   audio_cues?: AudioCueV1[];
+  cut_bias?: 'neutral' | 'visual_lead' | 'audio_lead' | null;
+  cut_offset_seconds?: number;
 };
 
 export type ScenePlanV1 = {
