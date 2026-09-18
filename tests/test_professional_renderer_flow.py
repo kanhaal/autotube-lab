@@ -89,6 +89,7 @@ def test_run_channel_routes_render_through_professional_production(monkeypatch, 
     assert seen["tts"] is tts
     assert seen["packet"] == packet
     assert seen["channel_id"] == "kernelrush"
+    assert Path(seen["output_dir"]).parts[-3:-1] == ("kernelrush", "runs")
     assert result["video"].endswith("video.mp4")
     assert result["short_video"].endswith("short.mp4")
     assert result["renderer"] == "professional"
