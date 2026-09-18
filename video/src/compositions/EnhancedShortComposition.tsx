@@ -1,5 +1,6 @@
 import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
 
+import {overlappedSceneWindow} from '../polish';
 import {
   resolveSceneAsset,
   scenePresentationStyle,
@@ -21,12 +22,24 @@ export const activeShortVisual = (
   frame: number,
 ): ActiveShortVisual | undefined => {
   const windows = sceneFrameWindows(pkg);
-  const index = windows.findIndex(
-    (window) => frame >= window.from && frame < window.from + window.durationInFrames,
+  const editWindows = windows.map((window, index) =>
+    overlappedSceneWindow(
+      window,
+      index,
+      windows.length,
+      Math.max(8, Math.round((pkg.manifest.fps || 30) * 0.28)),
+    ),
   );
+  let index = -1;
+  for (let candidate = 0; candidate < editWindows.length; candidate += 1) {
+    const window = editWindows[candidate];
+    if (frame >= window.from && frame < window.from + window.durationInFrames) {
+      index = candidate;
+    }
+  }
   if (index < 0) return undefined;
   const scene = pkg.scenes.scenes[index];
-  const window = windows[index];
+  const window = editWindows[index];
   const localFrame = Math.max(0, frame - window.from);
   return {
     scene,
