@@ -174,9 +174,18 @@ def test_valid_short_passes_and_enforces_native_vertical_duration(
     assert {"wrong_resolution", "short_duration"} <= _codes(report)
 
 
-def _effect_package(tmp_path: Path, effects: list[dict]) -> Path:
+def _effect_package(
+    tmp_path: Path,
+    effects: list[dict],
+    *,
+    script: str = "The verified value is 42.",
+) -> Path:
     package = tmp_path / "effect-package"
     package.mkdir()
+    (package / "script.json").write_text(
+        json.dumps({"title": "Verified", "script": script}),
+        encoding="utf-8",
+    )
     (package / "scenes.json").write_text(
         json.dumps(
             {
@@ -227,3 +236,28 @@ def test_effect_qa_rejects_stat_count_up_value_not_matching_verified_value(tmp_p
     issues = validate_effect_contracts(package)
 
     assert "stat_count_up_unverified" in {issue.code for issue in issues}
+
+
+def test_effect_qa_rejects_stat_value_absent_from_fact_gated_script(tmp_path: Path):
+    from app.quality.validation import validate_effect_contracts
+
+    package = _effect_package(
+        tmp_path,
+        [{"kind": "stat_count_up", "final_value": 42, "verified_value": 42}],
+        script="The verified value is 41.",
+    )
+    issues = validate_effect_contracts(package)
+
+    assert "stat_count_up_unverified" in {issue.code for issue in issues}
+
+
+def test_effect_qa_accepts_stat_value_present_in_fact_gated_script(tmp_path: Path):
+    from app.quality.validation import validate_effect_contracts
+
+    package = _effect_package(
+        tmp_path,
+        [{"kind": "stat_count_up", "final_value": 42, "verified_value": 42}],
+        script="The verified value is 42.",
+    )
+
+    assert validate_effect_contracts(package) == ()
