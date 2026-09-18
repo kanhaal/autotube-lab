@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 from app.quality.models import QualityIssue, QualityReport
@@ -76,17 +77,27 @@ def _require_captions(package: object, issues: list[QualityIssue]) -> None:
         issues.append(QualityIssue("missing_captions", "render package has no captions.json"))
 
 
+def _normalized_numeric_claims(text: str) -> set[str]:
+    return {
+        token.replace(",", "")
+        for token in re.findall(r"\b\d[\d,.]*%?\b", text)
+    }
+
+
 def validate_effect_contracts(package: Path | str | None) -> tuple[QualityIssue, ...]:
     if not package:
         return ()
-    path = Path(package) / "scenes.json"
+    package_path = Path(package)
+    path = package_path / "scenes.json"
     if not path.is_file():
         return ()
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
+        script_payload = json.loads((package_path / "script.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return (QualityIssue("effect_contract_unreadable", "scenes.json could not be validated"),)
+        return (QualityIssue("effect_contract_unreadable", "render package could not be validated"),)
 
+    verified_numbers = _normalized_numeric_claims(str(script_payload.get("script", "")))
     issues: list[QualityIssue] = []
     for scene in payload.get("scenes", []):
         for effect in scene.get("effects", []) or []:
@@ -103,11 +114,16 @@ def validate_effect_contracts(package: Path | str | None) -> tuple[QualityIssue,
             if kind == "stat_count_up":
                 final = effect.get("final_value")
                 verified = effect.get("verified_value")
-                if verified is None or final != verified:
+                normalized_final = str(final).replace(",", "")
+                if (
+                    verified is None
+                    or final != verified
+                    or normalized_final not in verified_numbers
+                ):
                     issues.append(
                         QualityIssue(
                             "stat_count_up_unverified",
-                            f"stat_count_up final value {final!r} does not match verified value {verified!r}",
+                            f"stat_count_up final value {final!r} is not backed by the fact-gated script",
                         )
                     )
     return tuple(issues)
