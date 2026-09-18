@@ -25,7 +25,8 @@ export const motionStyle = (name: MotionName, frame: number, fps: number): CSSPr
     extrapolateRight: 'clamp',
   });
   const pop = spring({fps, frame, config: {damping: 18, mass: 0.72, stiffness: 118}});
-  const springEase = Math.max(0, Math.min(1, pop));
+  const clampedSpring = Math.max(0, Math.min(1, pop));
+  const springEase = clampedSpring >= 0.999 ? 1 : clampedSpring <= 0.001 ? 0 : clampedSpring;
   switch (name) {
     case 'fade':
       return {opacity: ease};
