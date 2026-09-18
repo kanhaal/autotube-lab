@@ -25,6 +25,7 @@ const VerticalShot = ({
   durationInFrames,
   absoluteFrom,
   defaultTransition,
+  profile,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
@@ -33,6 +34,7 @@ const VerticalShot = ({
   durationInFrames: number;
   absoluteFrom: number;
   defaultTransition?: TransitionOutKind;
+  profile?: RenderPackageV1['manifest']['render_effects'];
 }) => (
   <>
     <SceneEffects
@@ -51,6 +53,7 @@ const VerticalShot = ({
         durationInFrames={durationInFrames}
         absoluteFrom={absoluteFrom}
         format="short"
+        profile={profile}
       />
     </SceneEffects>
     <SceneTransitionOut
@@ -125,6 +128,7 @@ export const ShortComposition = ({
               durationInFrames={editWindow.durationInFrames}
               absoluteFrom={editWindow.from}
               defaultTransition={pkg.manifest.render_effects?.default_transition_out}
+              profile={pkg.manifest.render_effects}
             />
           </Sequence>
         );
