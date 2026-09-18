@@ -4,6 +4,7 @@ import {KernelRushLong} from './compositions/KernelRushLong';
 import {KernelRushShort} from './compositions/KernelRushShort';
 import {LobbySignalLong} from './compositions/LobbySignalLong';
 import {LobbySignalShort} from './compositions/LobbySignalShort';
+import {KernelRushIntroSting, LobbySignalIntroSting} from './compositions/IntroStingComposition';
 import {packageDurationFrames} from './compositions/sceneTiming';
 import {shortDurationFrames, validateShortPackage} from './compositions/shortTiming';
 import type {RenderPackageV1} from './types';
@@ -57,6 +58,22 @@ const LobbySignalShortEntry = ({pkg}: RenderInput) => (pkg ? <LobbySignalShort p
 
 export const RemotionRoot = () => (
   <>
+    <Composition
+      id="KernelRushIntroSting"
+      component={KernelRushIntroSting}
+      durationInFrames={32}
+      fps={30}
+      width={1920}
+      height={1080}
+    />
+    <Composition
+      id="LobbySignalIntroSting"
+      component={LobbySignalIntroSting}
+      durationInFrames={32}
+      fps={30}
+      width={1920}
+      height={1080}
+    />
     <Composition
       id="KernelRushLong"
       component={KernelRushEntry}
