@@ -100,20 +100,50 @@ export const editorialItemStyle = (
   family: VfxFamily,
 ): CSSProperties => {
   const progress = headlineWordProgress(frame, fps, order + 1);
+  const inverse = 1 - progress;
   const direction = family === 'snap' ? (order % 2 === 0 ? 1 : -1) : 1;
-  const x = (1 - progress) * 34 * direction;
-  const y = (1 - progress) * 24;
-  const scale = 0.955 + progress * 0.045;
-  const rotate = family === 'snap' ? (1 - progress) * 1.8 * direction : (1 - progress) * 0.55;
+  const settle = Math.sin(progress * Math.PI) * inverse;
+  const x = inverse * (family === 'snap' ? 42 : 20) * direction;
+  const y = inverse * (family === 'snap' ? 20 : 28);
+  const scale =
+    0.95 +
+    progress * 0.05 +
+    settle * (family === 'snap' ? 0.016 : 0.008);
+  const rotateX = inverse * (family === 'snap' ? 3.2 : 1.4);
+  const rotateY = inverse * (family === 'snap' ? 4.4 : 1.8) * direction;
+  const rotateZ = inverse * (family === 'snap' ? 1.65 : 0.42) * direction;
+  const perspective = family === 'snap' ? 1120 : 1480;
 
   return {
-    filter: `blur(${((1 - progress) * 5).toFixed(2)}px)`,
+    filter: `blur(${(inverse * (family === 'snap' ? 5.5 : 4.2)).toFixed(2)}px)`,
     opacity: progress,
     transform:
-      `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) ` +
-      `scale(${scale.toFixed(4)}) rotateZ(${rotate.toFixed(3)}deg)`,
+      `perspective(${perspective}px) translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) ` +
+      `scale(${scale.toFixed(4)}) rotateX(${rotateX.toFixed(3)}deg) ` +
+      `rotateY(${rotateY.toFixed(3)}deg) rotateZ(${rotateZ.toFixed(3)}deg)`,
     transformOrigin: 'center center',
+    willChange: 'transform, opacity, filter',
   };
+};
+
+export const editorialFocusWeight = (
+  frame: number,
+  durationFrames: number,
+  order: number,
+  count: number,
+): number => {
+  const total = Math.max(1, count);
+  if (total === 1) return 1;
+
+  const duration = Math.max(2, durationFrames);
+  const progress = clamp01(frame / (duration - 1));
+  const safeOrder = Math.max(0, Math.min(total - 1, order));
+  const center = (safeOrder + 0.5) / total;
+  const segment = 1 / total;
+  const distance = Math.abs(progress - center) / segment;
+  const focus = 1 - smoothstep(distance);
+
+  return 0.22 + focus * 0.78;
 };
 
 export const transitionAccentState = (
