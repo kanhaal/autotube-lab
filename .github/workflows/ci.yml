@@ -31,3 +31,20 @@ jobs:
       - name: Smoke render native Short composition
         working-directory: video
         run: npx remotion render src/index.ts KernelRushShort /tmp/autotube-short-smoke.mp4 --props=smoke-short-props.json --frames=0-0
+
+  windows-real-package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: python -m pip install -e .
+      - name: Install video dependencies
+        working-directory: video
+        run: npm ci
+      - name: Render real KernelRush package through Python runner
+        run: python tests/windows_render_smoke.py
