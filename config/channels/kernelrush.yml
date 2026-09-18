@@ -8,6 +8,14 @@ brand:
   foreground: "#F5F7FA"
   accent: "#5EF2C2"
   secondary: "#7AA2FF"
+effects:
+  transition_default: whoosh_zoom
+  intro_sting_enabled: true
+  lower_third_enabled: true
+  lower_third_scene_types: [source_browser, github, device, quote, chapter]
+  default_effects:
+    - kind: film_grain
+      opacity: 0.035
 voice:
   backend: chatterbox
   fallback_backend: kokoro
