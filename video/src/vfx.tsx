@@ -2,6 +2,7 @@ import type {CSSProperties} from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 
 import type {ChannelTheme} from './themes/types';
+import type {CaptionCueV1} from './types';
 
 export type VfxFamily = 'precision' | 'snap';
 
@@ -92,6 +93,54 @@ export const headlineWordProgress = (
 };
 
 
+
+export type NarrationBeatState = {
+  word: string;
+  strength: number;
+};
+
+const normalizedBeatToken = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9.%+-]/g, '');
+
+export const narrationEmphasisBeat = (
+  cues: CaptionCueV1[],
+  seconds: number,
+  emphasis: string[],
+): NarrationBeatState => {
+  const cue = cues.find((candidate) => seconds >= candidate.start && seconds < candidate.end);
+  if (!cue) return {word: '', strength: 0};
+
+  const words = cue.word_timings?.length
+    ? cue.word_timings
+    : (cue.words.length ? cue.words : cue.text.trim().split(/\s+/).filter(Boolean)).map((text, index, all) => {
+        const duration = Math.max(0.001, cue.end - cue.start);
+        const start = cue.start + (index / Math.max(1, all.length)) * duration;
+        const end = cue.start + ((index + 1) / Math.max(1, all.length)) * duration;
+        return {text, start, end};
+      });
+  const active = words.find((word) => seconds >= word.start && seconds < word.end);
+  if (!active) return {word: '', strength: 0};
+
+  const token = normalizedBeatToken(active.text);
+  const emphasizedTokens = new Set(
+    emphasis
+      .flatMap((value) => value.split(/\s+/))
+      .map(normalizedBeatToken)
+      .filter(Boolean),
+  );
+  const isNumber = /\d/.test(token);
+  if (!token || (!isNumber && !emphasizedTokens.has(token))) {
+    return {word: '', strength: 0};
+  }
+
+  const span = Math.max(0.001, active.end - active.start);
+  const local = clamp01((seconds - active.start) / span);
+  const pulse = Math.sin(local * Math.PI);
+  return {
+    word: active.text,
+    strength: clamp01(0.38 + pulse * 0.62),
+  };
+};
 
 export const editorialLineProgress = (
   frame: number,
