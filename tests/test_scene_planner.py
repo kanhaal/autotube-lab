@@ -73,3 +73,17 @@ def test_scene_planner_supplies_one_repair_prompt_to_structured_client():
     assert len(llm.calls) == 1
     assert "repair_prompt" in llm.calls[0][2]
     assert "valid json" in llm.calls[0][2]["repair_prompt"].lower()
+
+
+def test_scene_planner_exposes_additive_v35_effect_vocabulary():
+    llm = FakeLLM(valid_plan("kernelrush"))
+
+    plan_longform_scenes("kernelrush", "Alpha launched.", packet(), llm)
+
+    prompt = llm.calls[0][0].lower()
+    assert "effects" in prompt
+    assert "transition_out" in prompt
+    assert "auto_zoom" in prompt
+    assert "stat_count_up" in prompt
+    assert "meme_flash" in prompt
+    assert "whoosh_zoom" in prompt
