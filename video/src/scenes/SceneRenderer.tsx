@@ -16,6 +16,7 @@ import {
   headlineWordProgress,
   PremiumVfxBackdrop,
 } from '../vfx';
+import type {NarrationBeatState} from '../vfx';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
 type Theme = Record<string, unknown>;
@@ -25,6 +26,7 @@ type SceneProps = {
   theme: Theme;
   assets: AssetRecordV1[];
   durationInFrames?: number;
+  narrationBeat?: NarrationBeatState;
 };
 
 type SceneComponent = ComponentType<SceneProps>;
@@ -113,7 +115,7 @@ const Panel = ({children, theme}: {children: ReactNode; theme: Theme}) => (
   </div>
 );
 
-const SceneShell = ({scene, theme, children, eyebrow, durationInFrames}: SceneProps & {children?: ReactNode; eyebrow?: string}) => {
+const SceneShell = ({scene, theme, children, eyebrow, durationInFrames, narrationBeat}: SceneProps & {children?: ReactNode; eyebrow?: string}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const layout = layoutForScene(scene.scene_type, 'long');
@@ -139,6 +141,8 @@ const SceneShell = ({scene, theme, children, eyebrow, durationInFrames}: ScenePr
       .map((value) => value.replace(/[^a-z0-9]/g, ''))
       .filter(Boolean),
   );
+  const beatToken = (narrationBeat?.word ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const beatStrength = narrationBeat?.strength ?? 0;
 
   const textBlock = (
     <div style={{maxWidth: layout === 'source' ? 720 : layout === 'data' ? 680 : 1380}}>
@@ -162,24 +166,31 @@ const SceneShell = ({scene, theme, children, eyebrow, durationInFrames}: ScenePr
           {headlineWords.map((word, index) => {
             const progress = headlineWordProgress(frame, fps, index);
             const normalized = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const beatMatch = Boolean(beatToken) && normalized === beatToken;
             const accentWord =
+              beatMatch ||
               emphasized.has(normalized) ||
               (layout === 'hero' && headlineWords.length <= 7 && index === headlineWords.length - 1);
+            const wordBeat = beatMatch ? beatStrength : 0;
             return (
               <span
                 key={`${word}-${index}`}
                 style={{
                   color: accentWord ? accent(theme) : 'inherit',
                   display: 'inline-block',
-                  filter: `blur(${((1 - progress) * 7).toFixed(2)}px)`,
+                  filter: `blur(${((1 - progress) * 7).toFixed(2)}px) brightness(${(1 + wordBeat * 0.16).toFixed(3)})`,
                   marginRight: 18,
                   opacity: progress,
-                  textShadow: accentWord
-                    ? `0 0 34px ${accent(theme)}22`
-                    : family === 'snap' && progress < 0.98
-                      ? `${((1 - progress) * 3).toFixed(2)}px 0 ${themeColor(theme, 'secondary', '#9CFF57')}55, ${((progress - 1) * 3).toFixed(2)}px 0 ${accent(theme)}44`
-                      : 'none',
-                  transform: `translate3d(0,${((1 - progress) * 42).toFixed(2)}px,0) rotateX(${((1 - progress) * -9).toFixed(2)}deg)`,
+                  textShadow: beatMatch
+                    ? `0 0 ${Math.round(28 + wordBeat * 34)}px ${accent(theme)}88`
+                    : accentWord
+                      ? `0 0 34px ${accent(theme)}22`
+                      : family === 'snap' && progress < 0.98
+                        ? `${((1 - progress) * 3).toFixed(2)}px 0 ${themeColor(theme, 'secondary', '#9CFF57')}55, ${((progress - 1) * 3).toFixed(2)}px 0 ${accent(theme)}44`
+                        : 'none',
+                  transform:
+                    `translate3d(0,${((1 - progress) * 42).toFixed(2)}px,0) ` +
+                    `rotateX(${((1 - progress) * -9).toFixed(2)}deg) scale(${(1 + wordBeat * 0.045).toFixed(4)})`,
                   transformOrigin: 'center bottom',
                 }}
               >
@@ -388,10 +399,18 @@ export const GameStoreScene: SceneComponent = (props) => {
 };
 
 export const StatScene: SceneComponent = (props) => {
-  const {scene, theme} = props;
+  const {scene, theme, narrationBeat} = props;
+  const beat = narrationBeat?.strength ?? 0;
   return (
     <SceneShell {...props} eyebrow="BY THE NUMBERS">
-      <div style={{color: accent(theme)}}>
+      <div
+        style={{
+          color: accent(theme),
+          filter: `brightness(${(1 + beat * 0.08).toFixed(3)})`,
+          transform: `scale(${(1 + beat * 0.028).toFixed(4)})`,
+          transformOrigin: 'left center',
+        }}
+      >
         <Stat label={stringValue(scene.data, 'label', scene.subheadline || 'Key metric')} value={numberValue(scene.data, 'value', 0)} suffix={stringValue(scene.data, 'suffix')} />
       </div>
     </SceneShell>
@@ -821,7 +840,7 @@ export const sceneComponentFor = (type: string): SceneComponent => {
   return component;
 };
 
-export const SceneRenderer = ({scene, theme, assets, durationInFrames}: SceneProps) => {
+export const SceneRenderer = ({scene, theme, assets, durationInFrames, narrationBeat}: SceneProps) => {
   const Component = sceneComponentFor(scene.scene_type);
   return (
     <Component
@@ -829,6 +848,7 @@ export const SceneRenderer = ({scene, theme, assets, durationInFrames}: ScenePro
       theme={theme}
       assets={assets}
       durationInFrames={durationInFrames}
+      narrationBeat={narrationBeat}
     />
   );
 };
