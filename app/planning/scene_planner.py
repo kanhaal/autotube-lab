@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from app.planning.scene_schema import (
-    EFFECT_KINDS,MOTIONS,SCENE_TYPES,TRANSITIONS,TRANSITION_OUTS,ScenePlan,parse_scene_plan,
+    EFFECT_KINDS,
+    MOTIONS,
+    SCENE_TYPES,
+    TRANSITIONS,
+    TRANSITION_OUTS,
+    ScenePlan,
+    parse_scene_plan,
 )
 
 REPAIR_PROMPT = (
@@ -28,6 +34,7 @@ LOBBYSIGNAL = """LobbySignal direction: faster gaming and internet-culture edito
 kinetic typography, punchier emphasis, game/store/context cards, timelines, and counters. Plan
 approximately 20-35 semantic scenes for a normal 4-7 minute episode without becoming chaotic."""
 
+
 def _prompt(channel_id: str) -> str:
     if channel_id == "kernelrush":
         channel = KERNELRUSH
@@ -35,6 +42,7 @@ def _prompt(channel_id: str) -> str:
         channel = LOBBYSIGNAL
     else:
         raise ValueError(f"unsupported channel: {channel_id}")
+
     vocabulary = (
         f"\nRegistered scene types: {sorted(SCENE_TYPES)}"
         f"\nRegistered motions: {sorted(MOTIONS)}"
@@ -44,10 +52,16 @@ def _prompt(channel_id: str) -> str:
     )
     return COMMON + "\n\n" + channel + vocabulary
 
+
 def plan_longform_scenes(channel_id: str, script: str, packet: dict, llm) -> ScenePlan:
     payload = llm.generate_json(
         _prompt(channel_id),
-        {"channel_id": channel_id,"format": "longform","script": script,"research": packet},
+        {
+            "channel_id": channel_id,
+            "format": "longform",
+            "script": script,
+            "research": packet,
+        },
         repair_prompt=REPAIR_PROMPT,
     )
     return parse_scene_plan(payload)
