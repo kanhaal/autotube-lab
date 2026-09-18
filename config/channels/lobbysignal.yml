@@ -21,3 +21,9 @@ voice:
 audio:
   mood: energetic
   music_enabled: true
+render_effects:
+  panel_style: neon_dark
+  default_transition_out: glitch_rgb_split
+  intro_sting: true
+  lower_third: true
+  texture: scanline_grain

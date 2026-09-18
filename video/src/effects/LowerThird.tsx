@@ -1,0 +1,3 @@
+import type {ChannelTheme} from '../themes/types';
+export type LowerThirdProps={channelName:string;label:string;theme:ChannelTheme};
+export const LowerThird=({channelName,label,theme}:LowerThirdProps)=><div style={{bottom:54,left:62,position:'absolute',zIndex:34}}><div style={{backdropFilter:'blur(16px)',background:'rgba(4,8,13,.72)',border:`1px solid ${theme.border}`,borderRadius:16,boxShadow:'0 18px 48px rgba(0,0,0,.3)',padding:'12px 18px'}}><div style={{color:theme.accent,fontSize:15,fontWeight:950,letterSpacing:2,textTransform:'uppercase'}}>{channelName}</div><div style={{fontSize:18,fontWeight:750,marginTop:3,opacity:.76}}>{label}</div></div></div>;

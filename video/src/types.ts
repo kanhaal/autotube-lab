@@ -5,7 +5,24 @@ export type CompositionId =
   | 'KernelRushLong'
   | 'LobbySignalLong'
   | 'KernelRushShort'
-  | 'LobbySignalShort';
+  | 'LobbySignalShort'
+  | 'KernelRushIntroSting'
+  | 'LobbySignalIntroSting';
+
+export type TransitionOutKind = 'glitch_rgb_split' | 'whoosh_zoom';
+
+export type SceneEffectV1 = {
+  kind: string;
+  [key: string]: unknown;
+};
+
+export type RenderEffectsProfileV1 = {
+  panel_style?: string;
+  default_transition_out?: TransitionOutKind;
+  intro_sting?: boolean;
+  lower_third?: boolean;
+  texture?: string;
+};
 
 export type RenderManifestV1 = {
   schema_version: '1';
@@ -20,6 +37,7 @@ export type RenderManifestV1 = {
   duration_seconds?: number;
   audio_path: string;
   theme: Record<string, unknown>;
+  render_effects?: RenderEffectsProfileV1;
 };
 
 export type ScriptPayload = {
@@ -41,6 +59,8 @@ export type SceneSpecV1 = {
   transition: string;
   fallback_scene_type: string;
   data: Record<string, unknown>;
+  effects?: SceneEffectV1[];
+  transition_out?: TransitionOutKind | null;
 };
 
 export type ScenePlanV1 = {

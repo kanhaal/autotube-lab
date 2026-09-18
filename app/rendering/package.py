@@ -31,6 +31,19 @@ def _dimensions(format_name: str) -> tuple[int, int]:
     raise ValueError(f"unsupported render format: {format_name}")
 
 
+def _runtime_scene(scene) -> dict:
+    payload = asdict(scene)
+    effects = []
+    for effect in payload.get("effects", []):
+        item = dict(effect)
+        if item.get("kind") == "meme_flash":
+            requested = float(item.get("duration_seconds", 1.0))
+            item["duration_seconds"] = min(1.5, max(0.5, requested))
+        effects.append(item)
+    payload["effects"] = effects
+    return payload
+
+
 def build_render_package(
     channel_cfg: dict,
     title: str,
@@ -94,13 +107,14 @@ def build_render_package(
         "duration_seconds": audio_duration,
         "audio_path": audio_dest.relative_to(package_dir).as_posix(),
         "theme": channel_cfg.get("brand", {}),
+        "render_effects": channel_cfg.get("render_effects", {}),
     }
     script_payload = {"title": title, "script": script}
     scene_payload = {
         "schema_version": scene_plan.schema_version,
         "channel_id": scene_plan.channel_id,
         "format": scene_plan.format,
-        "scenes": [asdict(scene) for scene in scene_plan.scenes],
+        "scenes": [_runtime_scene(scene) for scene in scene_plan.scenes],
     }
     caption_payload = {
         "schema_version": "1",

@@ -28,6 +28,39 @@ SCENE_TYPES = {
 
 MOTIONS = {"none", "fade", "push_left", "push_up", "slow_zoom", "punch_in", "parallax"}
 TRANSITIONS = {"cut", "crossfade", "wipe", "slide", "stinger"}
+TRANSITION_OUTS = {"glitch_rgb_split", "whoosh_zoom"}
+EFFECT_KINDS = {
+    "auto_zoom",
+    "spotlight_dim",
+    "cursor_smooth",
+    "code_typewriter",
+    "stat_count_up",
+    "split_compare",
+    "speed_ramp",
+    "scroll_reveal",
+    "tier_list",
+    "vs_screen",
+    "ticker_overlay",
+    "meme_flash",
+    "freeze_frame",
+    "kinetic_word_reveal",
+    "kinetic_infographic",
+    "progress_reveal",
+    "tag_pop",
+    "parallax_layers",
+    "grid_reveal",
+    "card_flip",
+    "underline_sweep",
+    "callout_leader_line",
+    "waveform_overlay",
+    "chromatic_pulse",
+    "film_grain",
+    "vignette_pulse",
+    "rack_focus",
+    "screen_shake",
+    "scanline_flicker",
+    "duotone_flash",
+}
 FORMATS = {"longform", "short"}
 
 
@@ -46,6 +79,8 @@ class SceneSpec:
     transition: str = "cut"
     fallback_scene_type: str = "fallback_editorial"
     data: dict[str, Any] = field(default_factory=dict)
+    effects: tuple[dict[str, Any], ...] = ()
+    transition_out: str | None = None
 
 
 @dataclass(frozen=True)
@@ -56,6 +91,23 @@ class ScenePlan:
     schema_version: str = "1"
 
 
+def _effects(scene_id: str, payload: object) -> tuple[dict[str, Any], ...]:
+    if payload is None:
+        return ()
+    if not isinstance(payload, list):
+        raise ValueError(f"scene {scene_id} effects must be an array")
+
+    normalized: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            raise ValueError(f"scene {scene_id} effect must be an object")
+        kind = str(item.get("kind", "")).strip()
+        if kind not in EFFECT_KINDS:
+            raise ValueError(f"unsupported effect kind: {kind}")
+        normalized.append(dict(item))
+    return tuple(normalized)
+
+
 def _scene(payload: dict) -> SceneSpec:
     scene_id = str(payload.get("id", "")).strip()
     narration = str(payload.get("narration", "")).strip()
@@ -63,6 +115,8 @@ def _scene(payload: dict) -> SceneSpec:
     motion = str(payload.get("motion", "none")).strip()
     transition = str(payload.get("transition", "cut")).strip()
     fallback = str(payload.get("fallback_scene_type", "fallback_editorial")).strip()
+    transition_out_raw = payload.get("transition_out")
+    transition_out = str(transition_out_raw).strip() if transition_out_raw is not None else None
 
     if not scene_id:
         raise ValueError("scene id is required")
@@ -74,6 +128,8 @@ def _scene(payload: dict) -> SceneSpec:
         raise ValueError(f"unsupported motion: {motion}")
     if transition not in TRANSITIONS:
         raise ValueError(f"unsupported transition: {transition}")
+    if transition_out is not None and transition_out not in TRANSITION_OUTS:
+        raise ValueError(f"unsupported transition_out: {transition_out}")
     if fallback not in SCENE_TYPES:
         raise ValueError(f"unsupported fallback_scene_type: {fallback}")
 
@@ -95,6 +151,8 @@ def _scene(payload: dict) -> SceneSpec:
         transition=transition,
         fallback_scene_type=fallback,
         data=data,
+        effects=_effects(scene_id, payload.get("effects")),
+        transition_out=transition_out,
     )
 
 

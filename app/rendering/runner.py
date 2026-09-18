@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -29,6 +30,7 @@ class RemotionRunner:
         package_root = Path(package_dir).resolve()
         output = Path(out).resolve()
         props_path = package_root / "remotion-props.json"
+        concurrency = max(1, int(os.getenv("AUTOTUBE_RENDER_CONCURRENCY", "4")))
         return [
             self.npx,
             "remotion",
@@ -40,9 +42,12 @@ class RemotionRunner:
             f"--props={props_path}",
             "--codec=h264",
             "--audio-codec=aac",
-            "--crf=16",
+            "--crf=14",
             "--pixel-format=yuv420p",
             "--audio-bitrate=192K",
+            "--x264-preset=slow",
+            "--color-space=bt709",
+            f"--concurrency={concurrency}",
         ]
 
     def _write_props(self, package_dir: Path) -> Path:

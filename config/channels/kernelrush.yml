@@ -21,3 +21,9 @@ voice:
 audio:
   mood: analytical
   music_enabled: true
+render_effects:
+  panel_style: glass_dark
+  default_transition_out: whoosh_zoom
+  intro_sting: true
+  lower_third: true
+  texture: subtle_grain
