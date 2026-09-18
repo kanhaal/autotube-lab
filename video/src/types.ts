@@ -1,6 +1,6 @@
 export type RenderFormat = 'long' | 'short';
 export type ScenePlanFormat = 'longform' | 'short';
-export type CompositionId = 'KernelRushLong'|'LobbySignalLong'|'KernelRushShort'|'LobbySignalShort';
+export type CompositionId = 'KernelRushLong'|'LobbySignalLong'|'KernelRushShort'|'LobbySignalShort'|'KernelRushIntroSting'|'LobbySignalIntroSting';
 export type TransitionOutKind = 'glitch_rgb_split'|'whoosh_zoom';
 export type SceneEffectV1 = {kind:string;[key:string]:unknown};
 export type RenderEffectsProfileV1 = {panel_style?:string;default_transition_out?:TransitionOutKind;intro_sting?:boolean;lower_third?:boolean;texture?:string};
