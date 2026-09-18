@@ -48,19 +48,19 @@ export const CaptionTrack = ({
     >
       <div
         style={{
-          backdropFilter: 'blur(18px)',
-          background: 'rgba(4,7,13,0.72)',
-          border: '1px solid rgba(255,255,255,0.10)',
-          borderRadius: 18,
-          boxShadow: '0 18px 52px rgba(0,0,0,0.30)',
+          backdropFilter: 'blur(24px)',
+          background: 'linear-gradient(180deg, rgba(9,12,20,.76), rgba(3,5,10,.64))',
+          border: '1px solid rgba(255,255,255,0.11)',
+          borderRadius: 20,
+          boxShadow: '0 22px 70px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,.055)',
           color: '#FFFFFF',
           fontFamily: 'Arial, Helvetica, sans-serif',
           fontSize: energetic ? 36 : 31,
           fontWeight: 800,
           letterSpacing: -0.35,
           lineHeight: 1.18,
-          maxWidth: 1320,
-          padding: energetic ? '15px 24px 17px' : '13px 22px 15px',
+          maxWidth: 1220,
+          padding: energetic ? '16px 25px 18px' : '14px 23px 16px',
           textAlign: 'center',
         }}
       >
@@ -68,12 +68,16 @@ export const CaptionTrack = ({
           <span
             key={`${word}-${index}`}
             style={{
-              color: index === active ? accent : '#FFFFFF',
+              background: energetic && index === active ? accent : 'transparent',
+              borderRadius: energetic && index === active ? 7 : 0,
+              boxShadow: index === active ? `0 0 24px ${accent}33` : 'none',
+              color: index === active ? (energetic ? '#07100D' : accent) : '#FFFFFF',
               display: 'inline-block',
-              marginRight: index === words.length - 1 ? 0 : 9,
-              opacity: index > active + 3 && active >= 0 ? 0.68 : 1,
-              textShadow: index === active ? `0 0 22px ${accent}55` : 'none',
-              transform: index === active ? 'scale(1.06)' : 'scale(1)',
+              marginRight: index === words.length - 1 ? 0 : 8,
+              opacity: active >= 0 && Math.abs(index - active) > 4 ? 0.62 : 1,
+              padding: energetic && index === active ? '1px 6px 3px' : '1px 1px 3px',
+              textShadow: index === active && !energetic ? `0 0 22px ${accent}55` : 'none',
+              transform: index === active ? 'translateY(-1px) scale(1.065)' : 'scale(1)',
               transformOrigin: 'center bottom',
             }}
           >
