@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import wave
 from pathlib import Path
 from typing import Any
 
@@ -108,6 +109,17 @@ def _deep_chatterbox() -> dict[str, Any]:
             backend.release()
 
 
+def _write_whisper_probe(path: Path) -> Path:
+    sample_rate = 16000
+    frames = b"\x00\x00" * (sample_rate // 2)
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(frames)
+    return path
+
+
 def _deep_whisper() -> dict[str, Any]:
     if importlib.util.find_spec("faster_whisper") is None:
         return _result(False, "not installed")
@@ -116,9 +128,26 @@ def _deep_whisper() -> dict[str, Any]:
         from app.captions.align import FasterWhisperTranscriber
 
         transcriber = FasterWhisperTranscriber()
-        model = transcriber._load_model()
-        detail = f"{transcriber.model_size} on {transcriber.device} loaded and released"
-        return _result(model is not None, detail)
+        with tempfile.TemporaryDirectory(prefix="autotube-whisper-smoke-") as tmp:
+            probe = _write_whisper_probe(Path(tmp) / "probe.wav")
+            segments, _ = transcriber.transcribe(
+                probe,
+                word_timestamps=False,
+                vad_filter=False,
+            )
+            list(segments)
+
+        if transcriber.fallback_reason:
+            detail = (
+                f"{transcriber.model_size} CUDA inference unavailable; "
+                "CPU fallback verified and released"
+            )
+        else:
+            detail = (
+                f"{transcriber.model_size} on {transcriber.device} "
+                "inference verified and released"
+            )
+        return _result(True, detail)
     except Exception as exc:  # noqa: BLE001 - health probe must report rather than abort
         return _result(False, str(exc))
     finally:
