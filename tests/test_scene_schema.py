@@ -105,3 +105,60 @@ def test_scene_schema_rejects_unknown_effect_and_transition_out():
         assert "transition_out" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+
+
+def test_scene_schema_accepts_v4_editorial_direction_fields():
+    payload = base_payload()
+    payload["scenes"][0]["shot_style"] = "source_full"
+    payload["scenes"][0]["camera"] = {
+        "preset": "dolly_in",
+        "intensity": 0.8,
+        "target": {"x": 0.62, "y": 0.36},
+    }
+    payload["scenes"][0]["micro_beats"] = [
+        {"at": 0.7, "kind": "focus_punch"},
+        {"at": 1.4, "kind": "callout"},
+    ]
+    payload["scenes"][0]["audio_cues"] = [
+        {"at": 0.0, "kind": "whoosh", "volume": 0.18},
+        {"at": 0.8, "kind": "impact", "volume": 0.12},
+    ]
+    payload["scenes"][0]["transition_out"] = "whip_pan"
+
+    scene = parse_scene_plan(payload).scenes[0]
+
+    assert scene.shot_style == "source_full"
+    assert scene.camera["preset"] == "dolly_in"
+    assert len(scene.micro_beats) == 2
+    assert scene.audio_cues[0]["kind"] == "whoosh"
+    assert scene.transition_out == "whip_pan"
+
+
+def test_scene_schema_rejects_unknown_v4_editorial_values():
+    payload = base_payload()
+    payload["scenes"][0]["shot_style"] = "powerpoint_slide"
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "shot_style" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+    payload = base_payload()
+    payload["scenes"][0]["camera"] = {"preset": "random_camera"}
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "camera" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+    payload = base_payload()
+    payload["scenes"][0]["audio_cues"] = [{"at": 0, "kind": "airhorn"}]
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "audio" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
