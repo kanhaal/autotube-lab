@@ -110,8 +110,9 @@ export const narrationEmphasisBeat = (
   const cue = cues.find((candidate) => seconds >= candidate.start && seconds < candidate.end);
   if (!cue) return {word: '', strength: 0};
 
-  const words = cue.word_timings?.length
-    ? cue.word_timings
+  const timedWords = cue.word_timings ?? [];
+  const words = timedWords.length
+    ? timedWords
     : (cue.words.length ? cue.words : cue.text.trim().split(/\s+/).filter(Boolean)).map((text, index, all) => {
         const duration = Math.max(0.001, cue.end - cue.start);
         const start = cue.start + (index / Math.max(1, all.length)) * duration;
