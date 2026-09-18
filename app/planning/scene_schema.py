@@ -91,6 +91,7 @@ CAMERA_PRESETS = {
 }
 AUDIO_CUE_KINDS = {"whoosh", "impact", "click", "riser", "braam", "ding", "glitch", "static", "lowpass"}
 MICRO_BEAT_KINDS = {"focus_punch", "callout", "tag_pop", "underline", "flash", "shake", "crop_shift"}
+CUT_BIASES = {"neutral", "visual_lead", "audio_lead"}
 FORMATS = {"longform", "short"}
 
 
@@ -115,6 +116,8 @@ class SceneSpec:
     camera: dict[str, Any] = field(default_factory=dict)
     micro_beats: tuple[dict[str, Any], ...] = ()
     audio_cues: tuple[dict[str, Any], ...] = ()
+    cut_bias: str | None = None
+    cut_offset_seconds: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -190,6 +193,12 @@ def _scene(payload: dict) -> SceneSpec:
     transition_out = str(transition_out_raw).strip() if transition_out_raw is not None else None
     shot_style_raw = payload.get("shot_style")
     shot_style = str(shot_style_raw).strip() if shot_style_raw is not None else None
+    cut_bias_raw = payload.get("cut_bias")
+    cut_bias = str(cut_bias_raw).strip() if cut_bias_raw is not None else None
+    try:
+        cut_offset_seconds = float(payload.get("cut_offset_seconds", 0.0) or 0.0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"scene {scene_id} cut_offset_seconds must be numeric") from exc
 
     if not scene_id:
         raise ValueError("scene id is required")
@@ -205,6 +214,10 @@ def _scene(payload: dict) -> SceneSpec:
         raise ValueError(f"unsupported transition_out: {transition_out}")
     if shot_style is not None and shot_style not in SHOT_STYLES:
         raise ValueError(f"unsupported shot_style: {shot_style}")
+    if cut_bias is not None and cut_bias not in CUT_BIASES:
+        raise ValueError(f"unsupported cut_bias: {cut_bias}")
+    if cut_offset_seconds < 0 or cut_offset_seconds > 1.5:
+        raise ValueError("cut_offset_seconds must be between 0 and 1.5")
     if fallback not in SCENE_TYPES:
         raise ValueError(f"unsupported fallback_scene_type: {fallback}")
 
@@ -242,6 +255,8 @@ def _scene(payload: dict) -> SceneSpec:
             payload.get("audio_cues"),
             allowed_kinds=AUDIO_CUE_KINDS,
         ),
+        cut_bias=cut_bias,
+        cut_offset_seconds=cut_offset_seconds,
     )
 
 
