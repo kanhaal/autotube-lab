@@ -1,5 +1,22 @@
-import {AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {
+  AbsoluteFill,
+  Audio,
+  Sequence,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from 'remotion';
 
+import {Chart} from '../components/Chart';
+import {Stat} from '../components/Stat';
+import {Timeline} from '../components/Timeline';
+import {
+  activeWordIndex,
+  layoutForScene,
+  overlappedSceneWindow,
+  sceneEnvelope,
+  staggerProgress,
+} from '../polish';
 import {scenePresentationStyle} from '../scenes/presentation';
 import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
 import type {ChannelTheme} from '../themes/types';
@@ -19,6 +36,13 @@ const dataNumber = (scene: SceneSpecV1, key: string): number | undefined => {
 const dataList = (scene: SceneSpecV1, key: string): string[] => {
   const value = scene.data[key];
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+};
+
+const dataNumberList = (scene: SceneSpecV1, key: string): number[] => {
+  const value = scene.data[key];
+  return Array.isArray(value)
+    ? value.filter((item): item is number => typeof item === 'number' && Number.isFinite(item))
+    : [];
 };
 
 const sceneLabel = (scene: SceneSpecV1): string => {
@@ -50,29 +74,67 @@ const sceneLabel = (scene: SceneSpecV1): string => {
 const VerticalPanel = ({children, theme}: {children: React.ReactNode; theme: ChannelTheme}) => (
   <div
     style={{
-      background: 'rgba(255,255,255,0.065)',
+      backdropFilter: 'blur(20px)',
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))',
       border: `1px solid ${theme.border}`,
       borderRadius: 34,
-      boxShadow: '0 22px 70px rgba(0,0,0,0.28)',
-      padding: '30px 32px',
+      boxShadow: '0 30px 84px rgba(0,0,0,0.30)',
+      padding: '32px 34px',
     }}
   >
     {children}
   </div>
 );
 
-const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}) => {
+const VerticalSceneVisual = ({
+  scene,
+  theme,
+  hasSourceAsset,
+}: {
+  scene: SceneSpecV1;
+  theme: ChannelTheme;
+  hasSourceAsset: boolean;
+}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+
+  if (scene.scene_type === 'source_browser' && hasSourceAsset) {
+    return <div style={{height: 600}} />;
+  }
+
   if (scene.scene_type === 'stat') {
-    const value = dataNumber(scene, 'value');
-    const suffix = dataText(scene, 'suffix');
     return (
       <VerticalPanel theme={theme}>
-        <div style={{color: theme.accent, fontSize: 112, fontWeight: 900, letterSpacing: -5}}>
-          {value ?? dataText(scene, 'value', '—')}{suffix}
+        <div style={{color: theme.accent}}>
+          <Stat
+            label={dataText(scene, 'label', scene.subheadline || 'Key metric')}
+            value={dataNumber(scene, 'value') ?? 0}
+            suffix={dataText(scene, 'suffix')}
+          />
         </div>
-        <div style={{fontSize: 30, fontWeight: 700, marginTop: 10, opacity: 0.7}}>
-          {dataText(scene, 'label', scene.subheadline || 'Key metric')}
-        </div>
+      </VerticalPanel>
+    );
+  }
+
+  if (scene.scene_type === 'chart') {
+    const labels = dataList(scene, 'labels');
+    const values = dataNumberList(scene, 'values');
+    const points = labels.slice(0, values.length).map((label, index) => ({
+      label,
+      value: values[index],
+    }));
+    return (
+      <VerticalPanel theme={theme}>
+        <Chart points={points.length ? points : [{label: 'Now', value: 1}]} accent={theme.accent} />
+      </VerticalPanel>
+    );
+  }
+
+  if (scene.scene_type === 'timeline') {
+    const items = dataList(scene, 'items').map((label) => ({label}));
+    return (
+      <VerticalPanel theme={theme}>
+        <Timeline items={items.length ? items : [{label: scene.subheadline || 'Now'}]} accent={theme.accent} />
       </VerticalPanel>
     );
   }
@@ -80,7 +142,7 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
   if (scene.scene_type === 'quote') {
     return (
       <VerticalPanel theme={theme}>
-        <div style={{borderLeft: `9px solid ${theme.accent}`, fontSize: 48, fontWeight: 760, lineHeight: 1.2, paddingLeft: 26}}>
+        <div style={{borderLeft: `9px solid ${theme.accent}`, fontSize: 48, fontWeight: 800, lineHeight: 1.18, paddingLeft: 26}}>
           “{dataText(scene, 'quote', scene.narration)}”
         </div>
         <div style={{fontSize: 24, marginTop: 24, opacity: 0.52}}>
@@ -95,14 +157,19 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
     const visible = (items.length ? items : scene.emphasis).slice(0, 4);
     return (
       <div style={{display: 'grid', gap: 16}}>
-        {visible.map((item, index) => (
-          <VerticalPanel key={`${item}-${index}`} theme={theme}>
-            <div style={{display: 'flex', gap: 18}}>
-              <span style={{color: theme.accent, fontSize: 28, fontWeight: 900}}>{String(index + 1).padStart(2, '0')}</span>
-              <span style={{fontSize: 31, fontWeight: 720, lineHeight: 1.2}}>{item}</span>
+        {visible.map((item, index) => {
+          const progress = staggerProgress(frame, fps, index + 2);
+          return (
+            <div key={`${item}-${index}`} style={{opacity: progress, transform: `translateX(${(1 - progress) * 28}px)`}}>
+              <VerticalPanel theme={theme}>
+                <div style={{display: 'flex', gap: 18}}>
+                  <span style={{color: theme.accent, fontSize: 28, fontWeight: 900}}>{String(index + 1).padStart(2, '0')}</span>
+                  <span style={{fontSize: 31, fontWeight: 760, lineHeight: 1.2}}>{item}</span>
+                </div>
+              </VerticalPanel>
             </div>
-          </VerticalPanel>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -112,14 +179,17 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
     const right = dataText(scene, 'after', dataText(scene, 'right', 'After'));
     return (
       <div style={{display: 'grid', gap: 18}}>
-        <VerticalPanel theme={theme}>
-          <div style={{fontSize: 22, fontWeight: 850, letterSpacing: 2, opacity: 0.45}}>A</div>
-          <div style={{fontSize: 38, fontWeight: 760, marginTop: 10}}>{left}</div>
-        </VerticalPanel>
-        <VerticalPanel theme={theme}>
-          <div style={{color: theme.accent, fontSize: 22, fontWeight: 850, letterSpacing: 2}}>B</div>
-          <div style={{fontSize: 38, fontWeight: 760, marginTop: 10}}>{right}</div>
-        </VerticalPanel>
+        {[['A', left], ['B', right]].map(([label, text], index) => {
+          const progress = staggerProgress(frame, fps, index + 2);
+          return (
+            <div key={label} style={{opacity: progress, transform: `translateY(${(1 - progress) * 24}px)`}}>
+              <VerticalPanel theme={theme}>
+                <div style={{color: index === 1 ? theme.accent : theme.muted, fontSize: 22, fontWeight: 900, letterSpacing: 2}}>{label}</div>
+                <div style={{fontSize: 40, fontWeight: 800, marginTop: 10}}>{text}</div>
+              </VerticalPanel>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -152,57 +222,122 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
   return (
     <VerticalPanel theme={theme}>
       <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
-        <div style={{background: theme.accent, borderRadius: 999, height: 14, width: 14}} />
-        <div style={{fontSize: 25, fontWeight: 850, letterSpacing: 1.4, textTransform: 'uppercase'}}>
+        <div style={{background: theme.accent, borderRadius: 999, boxShadow: `0 0 24px ${theme.accent}55`, height: 14, width: 14}} />
+        <div style={{fontSize: 25, fontWeight: 900, letterSpacing: 1.4, textTransform: 'uppercase'}}>
           {scene.emphasis.slice(0, 2).join(' • ') || scene.purpose}
         </div>
       </div>
-      <div style={{fontSize: 31, lineHeight: 1.35, marginTop: 22, opacity: 0.72}}>{detail}</div>
+      <div style={{fontSize: 31, lineHeight: 1.35, marginTop: 22, opacity: 0.7}}>{detail}</div>
     </VerticalPanel>
   );
 };
 
-const VerticalScene = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}) => {
+const VerticalScene = ({
+  scene,
+  theme,
+  durationInFrames,
+  hasSourceAsset,
+}: {
+  scene: SceneSpecV1;
+  theme: ChannelTheme;
+  durationInFrames: number;
+  hasSourceAsset: boolean;
+}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const presentation = scenePresentationStyle(scene, frame, fps);
-  const headlineSize = scene.headline.length > 42 ? 66 : scene.headline.length > 25 ? 78 : 92;
+  const envelope = sceneEnvelope(frame, durationInFrames, Math.max(7, Math.round(fps * 0.24)));
+  const layout = layoutForScene(scene.scene_type, 'short');
+  const labelProgress = staggerProgress(frame, fps, 0);
+  const headlineProgress = staggerProgress(frame, fps, 1);
+  const subProgress = staggerProgress(frame, fps, 2);
+  const visualProgress = staggerProgress(frame, fps, 3);
+  const headlineSize = scene.headline.length > 42 ? 64 : scene.headline.length > 25 ? 76 : 88;
+  const topPadding = layout === 'hero' ? 190 : layout === 'source' ? 120 : 128;
 
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(circle at 50% 20%, ${theme.secondary}22, transparent 34%), ${theme.background}`,
+        background:
+          `radial-gradient(circle at 50% 12%, ${theme.secondary}25, transparent 31%), ` +
+          `radial-gradient(circle at 82% 54%, ${theme.accent}10, transparent 32%), ${theme.background}`,
         boxSizing: 'border-box',
         color: theme.foreground,
-        fontFamily: 'Inter, Arial, sans-serif',
-        padding: '148px 132px 400px 88px',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        overflow: 'hidden',
+        padding: `${topPadding}px 68px 330px`,
       }}
     >
-      <div style={presentation}>
+      <div
+        style={{
+          ...presentation,
+          height: '100%',
+          opacity: (typeof presentation.opacity === 'number' ? presentation.opacity : 1) * envelope,
+        }}
+      >
         <div
           style={{
             color: theme.accent,
-            fontSize: 22,
+            fontSize: 21,
             fontWeight: 900,
-            letterSpacing: 3.2,
-            marginBottom: 26,
+            letterSpacing: 3.4,
+            marginBottom: 24,
+            opacity: labelProgress,
             textTransform: 'uppercase',
+            transform: `translateY(${(1 - labelProgress) * 18}px)`,
           }}
         >
           {sceneLabel(scene)}
         </div>
-        <div style={{fontSize: headlineSize, fontWeight: 920, letterSpacing: -3.4, lineHeight: 0.98}}>
+        <div
+          style={{
+            fontSize: headlineSize,
+            fontWeight: 900,
+            letterSpacing: -3.2,
+            lineHeight: 0.98,
+            maxWidth: 910,
+            opacity: headlineProgress,
+            transform: `translateY(${(1 - headlineProgress) * 28}px)`,
+          }}
+        >
           {scene.headline || scene.narration}
         </div>
         {scene.subheadline ? (
-          <div style={{fontSize: 34, fontWeight: 620, lineHeight: 1.25, marginTop: 26, opacity: 0.68}}>
+          <div
+            style={{
+              fontSize: 31,
+              fontWeight: 650,
+              lineHeight: 1.24,
+              marginTop: 22,
+              opacity: subProgress * 0.66,
+              transform: `translateY(${(1 - subProgress) * 18}px)`,
+            }}
+          >
             {scene.subheadline}
           </div>
         ) : null}
-        <div style={{marginTop: 46}}>
-          <VerticalSceneVisual scene={scene} theme={theme} />
+        <div
+          style={{
+            marginTop: layout === 'source' ? 28 : 40,
+            opacity: visualProgress,
+            transform: `translateY(${(1 - visualProgress) * 34}px) scale(${0.985 + visualProgress * 0.015})`,
+          }}
+        >
+          <VerticalSceneVisual scene={scene} theme={theme} hasSourceAsset={hasSourceAsset} />
         </div>
       </div>
+      <div
+        style={{
+          background: theme.accent,
+          borderRadius: 99,
+          bottom: 94,
+          height: 6,
+          left: 68,
+          opacity: 0.55,
+          position: 'absolute',
+          width: 74,
+        }}
+      />
     </AbsoluteFill>
   );
 };
@@ -210,38 +345,70 @@ const VerticalScene = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}
 const activeCaptionAt = (cues: CaptionCueV1[], seconds: number): CaptionCueV1 | undefined =>
   cues.find((cue) => seconds >= cue.start && seconds < cue.end);
 
+const cueWords = (cue: CaptionCueV1): string[] => {
+  if (cue.word_timings?.length) return cue.word_timings.map((word) => word.text);
+  if (cue.words.length) return cue.words;
+  return cue.text.trim().split(/\s+/).filter(Boolean);
+};
+
 const VerticalCaptionTrack = ({cues, theme}: {cues: CaptionCueV1[]; theme: ChannelTheme}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const cue = activeCaptionAt(cues, frame / fps);
+  const seconds = frame / fps;
+  const cue = activeCaptionAt(cues, seconds);
   if (!cue) return null;
+
+  const words = cueWords(cue);
+  const active = activeWordIndex(cue, seconds);
+  const localFrame = Math.max(0, frame - Math.round(cue.start * fps));
+  const reveal = staggerProgress(localFrame, fps, 0);
 
   return (
     <div
       style={{
-        bottom: 238,
-        left: 70,
+        bottom: 160,
+        left: 54,
         position: 'absolute',
-        right: 150,
+        right: 54,
         textAlign: 'center',
+        transform: `translateY(${(1 - reveal) * 20}px)`,
+        opacity: reveal,
       }}
     >
       <div
         style={{
-          background: theme.captionStyle === 'punch' ? 'rgba(6,5,12,0.9)' : 'rgba(4,8,14,0.84)',
+          backdropFilter: 'blur(20px)',
+          background: theme.captionStyle === 'punch' ? 'rgba(7,4,12,0.80)' : 'rgba(3,8,14,0.74)',
           border: `1px solid ${theme.border}`,
-          borderRadius: theme.captionStyle === 'punch' ? 24 : 18,
-          boxShadow: '0 16px 48px rgba(0,0,0,0.36)',
+          borderRadius: 26,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.34)',
           color: '#FFFFFF',
           display: 'inline-block',
-          fontSize: theme.captionStyle === 'punch' ? 58 : 50,
-          fontWeight: 880,
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: theme.captionStyle === 'punch' ? 57 : 53,
+          fontWeight: 900,
+          letterSpacing: -1.2,
           lineHeight: 1.08,
-          maxWidth: 790,
+          maxWidth: 900,
           padding: '20px 28px 24px',
         }}
       >
-        {cue.text}
+        {words.map((word, index) => (
+          <span
+            key={`${word}-${index}`}
+            style={{
+              background: index === active ? theme.accent : 'transparent',
+              borderRadius: index === active ? 9 : 0,
+              color: index === active ? '#07100D' : '#FFFFFF',
+              display: 'inline-block',
+              margin: '2px 4px',
+              padding: index === active ? '2px 7px 4px' : '2px 3px 4px',
+              transform: index === active ? 'scale(1.06)' : 'scale(1)',
+            }}
+          >
+            {word}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -252,14 +419,28 @@ export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Cha
   const windows = sceneFrameWindows(pkg);
 
   return (
-    <AbsoluteFill style={{background: theme.background}}>
+    <AbsoluteFill style={{background: theme.background, fontFamily: 'Arial, Helvetica, sans-serif'}}>
       {pkg.manifest.audio_path ? <Audio src={staticFile(pkg.manifest.audio_path)} /> : null}
       {pkg.scenes.scenes.map((scene, index) => {
         const window = windows[index];
         if (!window) return null;
+        const editWindow = overlappedSceneWindow(
+          window,
+          index,
+          pkg.scenes.scenes.length,
+          Math.max(8, Math.round(pkg.manifest.fps * 0.28)),
+        );
+        const hasSourceAsset = scene.asset_ids.some((id) =>
+          pkg.assets.records.some((asset) => asset.id === id),
+        );
         return (
-          <Sequence key={scene.id} from={window.from} durationInFrames={window.durationInFrames}>
-            <VerticalScene scene={scene} theme={theme} />
+          <Sequence key={scene.id} from={editWindow.from} durationInFrames={editWindow.durationInFrames}>
+            <VerticalScene
+              scene={scene}
+              theme={theme}
+              durationInFrames={editWindow.durationInFrames}
+              hasSourceAsset={hasSourceAsset}
+            />
           </Sequence>
         );
       })}
