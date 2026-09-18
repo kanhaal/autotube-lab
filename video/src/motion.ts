@@ -24,20 +24,34 @@ export const motionStyle = (name: MotionName, frame: number, fps: number): CSSPr
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const pop = spring({fps, frame, config: {damping: 16, mass: 0.8, stiffness: 120}});
+  const pop = spring({fps, frame, config: {damping: 18, mass: 0.72, stiffness: 118}});
+  const clampedSpring = Math.max(0, Math.min(1, pop));
+  const springEase = clampedSpring >= 0.999 ? 1 : clampedSpring <= 0.001 ? 0 : clampedSpring;
   switch (name) {
     case 'fade':
       return {opacity: ease};
     case 'push_left':
-      return {opacity: ease, transform: `translateX(${(1 - ease) * 70}px)`};
+      return {
+        opacity: springEase,
+        transform: `translateX(${(1 - springEase) * 92}px) scale(${0.985 + springEase * 0.015})`,
+      };
     case 'push_up':
-      return {opacity: ease, transform: `translateY(${(1 - ease) * 60}px)`};
-    case 'slow_zoom':
-      return {transform: `scale(${1 + Math.min(frame / Math.max(1, fps * 10), 1) * 0.035})`};
-    case 'punch_in':
-      return {opacity: Math.min(1, pop), transform: `scale(${0.91 + Math.min(1, pop) * 0.09})`};
-    case 'parallax':
-      return {transform: `translate3d(${Math.min(frame, fps * 4) * -0.18}px,0,0)`};
+      return {
+        opacity: springEase,
+        transform: `translateY(${(1 - springEase) * 74}px) scale(${0.97 + springEase * 0.03})`,
+      };
+    case 'slow_zoom': {
+      const progress = Math.max(0, Math.min(1, frame / Math.max(1, fps * 8)));
+      return {transform: `translateY(${-8 * progress}px) scale(${1 + progress * 0.055})`};
+    }
+    case 'punch_in': {
+      const overshoot = Math.max(0, Math.min(1.06, pop));
+      return {opacity: springEase, transform: `scale(${0.89 + overshoot * 0.11})`};
+    }
+    case 'parallax': {
+      const progress = Math.max(0, Math.min(1, frame / Math.max(1, fps * 5)));
+      return {transform: `translate3d(${-36 * progress}px,${-6 * progress}px,0) scale(${1 + progress * 0.018})`};
+    }
     default:
       throw new Error(`Unknown motion: ${String(name)}`);
   }

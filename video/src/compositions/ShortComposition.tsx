@@ -1,8 +1,40 @@
-import {AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {
+  AbsoluteFill,
+  Audio,
+  Sequence,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from 'remotion';
 
-import {scenePresentationStyle} from '../scenes/presentation';
+import {Chart} from '../components/Chart';
+import {Stat} from '../components/Stat';
+import {Timeline} from '../components/Timeline';
+import {
+  activeWordIndex,
+  layoutForScene,
+  overlappedSceneWindow,
+  sceneEnvelope,
+  staggerProgress,
+} from '../polish';
+import {
+  resolveSceneAsset,
+  scenePresentationStyle,
+  sceneSupportsVerifiedAsset,
+} from '../scenes/presentation';
 import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
+import {
+  cinematicCameraStyle,
+  editorialFocusWeight,
+  editorialItemStyle,
+  editorialLineProgress,
+  headlineWordProgress,
+  narrationEmphasisBeat,
+  PremiumVfxBackdrop,
+  TransitionAccent,
+} from '../vfx';
 import type {ChannelTheme} from '../themes/types';
+import type {NarrationBeatState} from '../vfx';
 import {sceneFrameWindows} from './sceneTiming';
 import {validateShortPackage} from './shortTiming';
 
@@ -19,6 +51,13 @@ const dataNumber = (scene: SceneSpecV1, key: string): number | undefined => {
 const dataList = (scene: SceneSpecV1, key: string): string[] => {
   const value = scene.data[key];
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+};
+
+const dataNumberList = (scene: SceneSpecV1, key: string): number[] => {
+  const value = scene.data[key];
+  return Array.isArray(value)
+    ? value.filter((item): item is number => typeof item === 'number' && Number.isFinite(item))
+    : [];
 };
 
 const sceneLabel = (scene: SceneSpecV1): string => {
@@ -50,40 +89,131 @@ const sceneLabel = (scene: SceneSpecV1): string => {
 const VerticalPanel = ({children, theme}: {children: React.ReactNode; theme: ChannelTheme}) => (
   <div
     style={{
-      background: 'rgba(255,255,255,0.065)',
+      backdropFilter: 'blur(20px)',
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))',
       border: `1px solid ${theme.border}`,
       borderRadius: 34,
-      boxShadow: '0 22px 70px rgba(0,0,0,0.28)',
-      padding: '30px 32px',
+      boxShadow: '0 30px 84px rgba(0,0,0,0.30)',
+      padding: '32px 34px',
     }}
   >
     {children}
   </div>
 );
 
-const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}) => {
+const VerticalSceneVisual = ({
+  scene,
+  theme,
+  hasSourceAsset,
+  durationInFrames,
+  narrationBeat,
+}: {
+  scene: SceneSpecV1;
+  theme: ChannelTheme;
+  hasSourceAsset: boolean;
+  durationInFrames: number;
+  narrationBeat?: NarrationBeatState;
+}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+
+  if (scene.scene_type === 'source_browser' && hasSourceAsset) {
+    return <div style={{height: 600}} />;
+  }
+
   if (scene.scene_type === 'stat') {
-    const value = dataNumber(scene, 'value');
-    const suffix = dataText(scene, 'suffix');
     return (
       <VerticalPanel theme={theme}>
-        <div style={{color: theme.accent, fontSize: 112, fontWeight: 900, letterSpacing: -5}}>
-          {value ?? dataText(scene, 'value', '—')}{suffix}
-        </div>
-        <div style={{fontSize: 30, fontWeight: 700, marginTop: 10, opacity: 0.7}}>
-          {dataText(scene, 'label', scene.subheadline || 'Key metric')}
+        <div
+          style={{
+            color: theme.accent,
+            filter: `brightness(${(1 + (narrationBeat?.strength ?? 0) * 0.08).toFixed(3)})`,
+            transform: `scale(${(1 + (narrationBeat?.strength ?? 0) * 0.028).toFixed(4)})`,
+            transformOrigin: 'left center',
+          }}
+        >
+          <Stat
+            label={dataText(scene, 'label', scene.subheadline || 'Key metric')}
+            value={dataNumber(scene, 'value') ?? 0}
+            suffix={dataText(scene, 'suffix')}
+          />
         </div>
       </VerticalPanel>
     );
   }
 
-  if (scene.scene_type === 'quote') {
+  if (scene.scene_type === 'chart') {
+    const labels = dataList(scene, 'labels');
+    const values = dataNumberList(scene, 'values');
+    const points = labels.slice(0, values.length).map((label, index) => ({
+      label,
+      value: values[index],
+    }));
     return (
       <VerticalPanel theme={theme}>
-        <div style={{borderLeft: `9px solid ${theme.accent}`, fontSize: 48, fontWeight: 760, lineHeight: 1.2, paddingLeft: 26}}>
-          “{dataText(scene, 'quote', scene.narration)}”
+        <Chart points={points.length ? points : [{label: 'Now', value: 1}]} accent={theme.accent} />
+      </VerticalPanel>
+    );
+  }
+
+  if (scene.scene_type === 'timeline') {
+    const items = dataList(scene, 'items').map((label) => ({label}));
+    return (
+      <VerticalPanel theme={theme}>
+        <Timeline items={items.length ? items : [{label: scene.subheadline || 'Now'}]} accent={theme.accent} />
+      </VerticalPanel>
+    );
+  }
+
+  if (scene.scene_type === 'quote') {
+    const quote = dataText(scene, 'quote', scene.narration);
+    const words = quote.trim().split(/\s+/).filter(Boolean);
+    const family = theme.transitionFamily;
+    const attributionProgress = editorialLineProgress(frame, fps, Math.ceil(words.length / 4) + 1, family);
+    return (
+      <VerticalPanel theme={theme}>
+        <div style={{fontSize: 50, fontWeight: 820, lineHeight: 1.16, paddingLeft: 18, position: 'relative'}}>
+          <span
+            style={{
+              color: theme.accent,
+              fontSize: 88,
+              left: -18,
+              lineHeight: 0.7,
+              opacity: editorialLineProgress(frame, fps, 0, family) * 0.82,
+              position: 'absolute',
+              top: -20,
+            }}
+          >
+            “
+          </span>
+          {words.map((word, index) => {
+            const progress = editorialLineProgress(frame, fps, Math.floor(index / 4), family);
+            return (
+              <span
+                key={`${word}-${index}`}
+                style={{
+                  display: 'inline-block',
+                  filter: `blur(${((1 - progress) * 5).toFixed(2)}px)`,
+                  marginRight: 11,
+                  opacity: progress,
+                  transform: `translateY(${((1 - progress) * 18).toFixed(2)}px)`,
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
         </div>
-        <div style={{fontSize: 24, marginTop: 24, opacity: 0.52}}>
+        <div
+          style={{
+            color: theme.accent,
+            fontSize: 24,
+            fontWeight: 750,
+            marginTop: 26,
+            opacity: attributionProgress * 0.72,
+            transform: `translateX(${(1 - attributionProgress) * 18}px)`,
+          }}
+        >
           {dataText(scene, 'attribution', scene.source_ids[0] || '')}
         </div>
       </VerticalPanel>
@@ -94,14 +224,16 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
     const items = dataList(scene, 'items');
     const visible = (items.length ? items : scene.emphasis).slice(0, 4);
     return (
-      <div style={{display: 'grid', gap: 16}}>
+      <div style={{display: 'grid', gap: 16, perspective: 1300}}>
         {visible.map((item, index) => (
-          <VerticalPanel key={`${item}-${index}`} theme={theme}>
-            <div style={{display: 'flex', gap: 18}}>
-              <span style={{color: theme.accent, fontSize: 28, fontWeight: 900}}>{String(index + 1).padStart(2, '0')}</span>
-              <span style={{fontSize: 31, fontWeight: 720, lineHeight: 1.2}}>{item}</span>
-            </div>
-          </VerticalPanel>
+          <div key={`${item}-${index}`} style={editorialItemStyle(frame, fps, index, theme.transitionFamily)}>
+            <VerticalPanel theme={theme}>
+              <div style={{display: 'flex', gap: 18}}>
+                <span style={{color: theme.accent, fontSize: 28, fontWeight: 900}}>{String(index + 1).padStart(2, '0')}</span>
+                <span style={{fontSize: 31, fontWeight: 760, lineHeight: 1.2}}>{item}</span>
+              </div>
+            </VerticalPanel>
+          </div>
         ))}
       </div>
     );
@@ -111,40 +243,109 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
     const left = dataText(scene, 'before', dataText(scene, 'left', 'Before'));
     const right = dataText(scene, 'after', dataText(scene, 'right', 'After'));
     return (
-      <div style={{display: 'grid', gap: 18}}>
-        <VerticalPanel theme={theme}>
-          <div style={{fontSize: 22, fontWeight: 850, letterSpacing: 2, opacity: 0.45}}>A</div>
-          <div style={{fontSize: 38, fontWeight: 760, marginTop: 10}}>{left}</div>
-        </VerticalPanel>
-        <VerticalPanel theme={theme}>
-          <div style={{color: theme.accent, fontSize: 22, fontWeight: 850, letterSpacing: 2}}>B</div>
-          <div style={{fontSize: 38, fontWeight: 760, marginTop: 10}}>{right}</div>
-        </VerticalPanel>
+      <div style={{display: 'grid', gap: 18, perspective: 1300}}>
+        {[['A', left], ['B', right]].map(([label, text], index) => (
+          <div key={label} style={editorialItemStyle(frame, fps, index, theme.transitionFamily)}>
+            <VerticalPanel theme={theme}>
+              <div style={{color: index === 1 ? theme.accent : theme.muted, fontSize: 22, fontWeight: 900, letterSpacing: 2}}>{label}</div>
+              <div style={{fontSize: 40, fontWeight: 800, marginTop: 10}}>{text}</div>
+            </VerticalPanel>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (scene.scene_type === 'code') {
+    const lines = dataText(scene, 'code', dataText(scene, 'snippet', '// verified example')).split(/\r?\n/).slice(0, 8);
+    const progresses = lines.map((_, index) => editorialLineProgress(frame, fps, index, theme.transitionFamily));
+    const activeLine = Math.max(0, progresses.reduce((latest, progress, index) => (progress > 0.18 ? index : latest), 0));
     return (
-      <pre
+      <div
         style={{
           background: '#090D14',
           border: `1px solid ${theme.border}`,
           borderRadius: 32,
+          boxShadow: '0 30px 90px rgba(0,0,0,.36)',
           color: '#E7EDF6',
           fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-          fontSize: 27,
-          lineHeight: 1.45,
-          margin: 0,
-          maxHeight: 470,
+          fontSize: 25,
+          lineHeight: 1.42,
+          maxHeight: 500,
           overflow: 'hidden',
-          padding: 30,
-          whiteSpace: 'pre-wrap',
+          padding: '24px 0 28px',
         }}
       >
-        <span style={{color: theme.accent}}>{dataText(scene, 'language', 'code')}</span>{'\n\n'}
-        {dataText(scene, 'code', dataText(scene, 'snippet', '// verified example'))}
-      </pre>
+        <div style={{borderBottom: `1px solid ${theme.border}`, color: theme.accent, fontSize: 18, fontWeight: 850, letterSpacing: 2, padding: '0 28px 18px', textTransform: 'uppercase'}}>
+          {dataText(scene, 'language', 'code')}
+        </div>
+        <div style={{paddingTop: 16}}>
+          {lines.map((line, index) => {
+            const progress = progresses[index];
+            const active = index === activeLine;
+            return (
+              <div
+                key={`${line}-${index}`}
+                style={{
+                  background: active ? `linear-gradient(90deg, ${theme.accent}18, transparent)` : 'transparent',
+                  borderLeft: `3px solid ${active ? theme.accent : 'transparent'}`,
+                  display: 'grid',
+                  gridTemplateColumns: '46px 1fr',
+                  opacity: 0.18 + progress * 0.82,
+                  padding: '3px 26px 3px 16px',
+                  transform: `translateX(${((1 - progress) * 24).toFixed(2)}px)`,
+                }}
+              >
+                <span style={{color: active ? theme.accent : theme.muted, opacity: 0.72, textAlign: 'right'}}>{String(index + 1).padStart(2, '0')}</span>
+                <span style={{paddingLeft: 18, whiteSpace: 'pre-wrap'}}>{line || ' '}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (scene.scene_type === 'process') {
+    const steps = (dataList(scene, 'steps').length ? dataList(scene, 'steps') : ['Input', 'Process', 'Output']).slice(0, 4);
+    return (
+      <div style={{display: 'grid', gap: 16, perspective: 1300}}>
+        {steps.map((step, index) => {
+          const motion = editorialItemStyle(frame, fps, index, theme.transitionFamily);
+          const focus = editorialFocusWeight(frame, durationInFrames, index, steps.length);
+          const motionOpacity = typeof motion.opacity === 'number' ? motion.opacity : 1;
+          const motionTransform = typeof motion.transform === 'string' ? motion.transform : '';
+          return (
+            <div
+              key={`${step}-${index}`}
+              style={{
+                ...motion,
+                opacity: motionOpacity * (0.7 + focus * 0.3),
+                transform: `${motionTransform} scale(${(0.985 + focus * 0.024).toFixed(4)})`,
+              }}
+            >
+              <VerticalPanel theme={theme}>
+                <div style={{alignItems: 'center', display: 'flex', gap: 18}}>
+                  <span style={{color: theme.accent, fontSize: 26, fontWeight: 950}}>{String(index + 1).padStart(2, '0')}</span>
+                  <span style={{fontSize: 32, fontWeight: 820, lineHeight: 1.16}}>{step}</span>
+                </div>
+                <div
+                  style={{
+                    background: `linear-gradient(90deg, ${theme.accent}, transparent)`,
+                    borderRadius: 99,
+                    height: 4,
+                    marginTop: 20,
+                    opacity: 0.3 + focus * 0.7,
+                    transform: `scaleX(${focus.toFixed(4)})`,
+                    transformOrigin: 'left',
+                    width: '100%',
+                  }}
+                />
+              </VerticalPanel>
+            </div>
+          );
+        })}
+      </div>
     );
   }
 
@@ -152,57 +353,200 @@ const VerticalSceneVisual = ({scene, theme}: {scene: SceneSpecV1; theme: Channel
   return (
     <VerticalPanel theme={theme}>
       <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
-        <div style={{background: theme.accent, borderRadius: 999, height: 14, width: 14}} />
-        <div style={{fontSize: 25, fontWeight: 850, letterSpacing: 1.4, textTransform: 'uppercase'}}>
+        <div style={{background: theme.accent, borderRadius: 999, boxShadow: `0 0 24px ${theme.accent}55`, height: 14, width: 14}} />
+        <div style={{fontSize: 25, fontWeight: 900, letterSpacing: 1.4, textTransform: 'uppercase'}}>
           {scene.emphasis.slice(0, 2).join(' • ') || scene.purpose}
         </div>
       </div>
-      <div style={{fontSize: 31, lineHeight: 1.35, marginTop: 22, opacity: 0.72}}>{detail}</div>
+      <div style={{fontSize: 31, lineHeight: 1.35, marginTop: 22, opacity: 0.7}}>{detail}</div>
     </VerticalPanel>
   );
 };
 
-const VerticalScene = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}) => {
+const VerticalScene = ({
+  scene,
+  theme,
+  durationInFrames,
+  hasSourceAsset,
+  absoluteFrom,
+  captions,
+}: {
+  scene: SceneSpecV1;
+  theme: ChannelTheme;
+  durationInFrames: number;
+  hasSourceAsset: boolean;
+  absoluteFrom: number;
+  captions: CaptionCueV1[];
+}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const presentation = scenePresentationStyle(scene, frame, fps);
-  const headlineSize = scene.headline.length > 42 ? 66 : scene.headline.length > 25 ? 78 : 92;
+  const envelope = sceneEnvelope(frame, durationInFrames, Math.max(7, Math.round(fps * 0.24)));
+  const layout = layoutForScene(scene.scene_type, 'short');
+  const labelProgress = staggerProgress(frame, fps, 0);
+  const headlineProgress = staggerProgress(frame, fps, 1);
+  const subProgress = staggerProgress(frame, fps, 2);
+  const visualProgress = staggerProgress(frame, fps, 3);
+  const headlineSize = scene.headline.length > 42 ? 64 : scene.headline.length > 25 ? 76 : 88;
+  const topPadding = layout === 'hero' ? 190 : layout === 'source' ? 120 : 128;
+  const camera = cinematicCameraStyle(
+    frame,
+    durationInFrames,
+    fps,
+    theme.transitionFamily,
+    theme.motionIntensity * 0.48,
+  );
+  const presentationTransform =
+    typeof presentation.transform === 'string' ? presentation.transform : '';
+  const cameraTransform = typeof camera.transform === 'string' ? camera.transform : '';
+  const headlineWords = (scene.headline || scene.narration).trim().split(/\s+/).filter(Boolean);
+  const emphasisWords = new Set(
+    scene.emphasis
+      .flatMap((value) => value.toLowerCase().split(/\s+/))
+      .map((value) => value.replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean),
+  );
+  const narrationBeat = narrationEmphasisBeat(
+    captions,
+    (absoluteFrom + frame) / Math.max(1, fps),
+    scene.emphasis,
+  );
+  const beatToken = narrationBeat.word.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(circle at 50% 20%, ${theme.secondary}22, transparent 34%), ${theme.background}`,
+        background:
+          `radial-gradient(circle at 50% 12%, ${theme.secondary}25, transparent 31%), ` +
+          `radial-gradient(circle at 82% 54%, ${theme.accent}10, transparent 32%), ${theme.background}`,
         boxSizing: 'border-box',
         color: theme.foreground,
-        fontFamily: 'Inter, Arial, sans-serif',
-        padding: '148px 132px 400px 88px',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        overflow: 'hidden',
+        padding: `${topPadding}px 68px 330px`,
       }}
     >
-      <div style={presentation}>
+      <PremiumVfxBackdrop theme={theme} format="short" />
+      <div
+        style={{
+          ...presentation,
+          ...camera,
+          height: '100%',
+          opacity: (typeof presentation.opacity === 'number' ? presentation.opacity : 1) * envelope,
+          position: 'relative',
+          transform: `${presentationTransform} ${cameraTransform}`.trim(),
+          zIndex: 2,
+        }}
+      >
         <div
           style={{
             color: theme.accent,
-            fontSize: 22,
+            fontSize: 21,
             fontWeight: 900,
-            letterSpacing: 3.2,
-            marginBottom: 26,
+            letterSpacing: 3.4,
+            marginBottom: 24,
+            opacity: labelProgress,
             textTransform: 'uppercase',
+            transform: `translateY(${(1 - labelProgress) * 18}px)`,
           }}
         >
           {sceneLabel(scene)}
         </div>
-        <div style={{fontSize: headlineSize, fontWeight: 920, letterSpacing: -3.4, lineHeight: 0.98}}>
-          {scene.headline || scene.narration}
+        <div
+          style={{
+            fontSize: headlineSize,
+            fontWeight: 900,
+            letterSpacing: -3.2,
+            lineHeight: 0.95,
+            maxWidth: 930,
+            opacity: headlineProgress,
+          }}
+        >
+          {headlineWords.map((word, index) => {
+            const wordProgress = headlineWordProgress(frame, fps, index);
+            const normalized = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const beatMatch = Boolean(beatToken) && normalized === beatToken;
+            const wordBeat = beatMatch ? narrationBeat.strength : 0;
+            const accentWord =
+              beatMatch ||
+              emphasisWords.has(normalized) ||
+              (headlineWords.length <= 7 && index === headlineWords.length - 1);
+            return (
+              <span
+                key={`${word}-${index}`}
+                style={{
+                  color: accentWord ? theme.accent : '#FFFFFF',
+                  display: 'inline-block',
+                  filter: `blur(${((1 - wordProgress) * 9).toFixed(2)}px) brightness(${(1 + wordBeat * 0.16).toFixed(3)})`,
+                  marginRight: 16,
+                  opacity: wordProgress,
+                  textShadow: beatMatch
+                    ? `0 0 ${Math.round(28 + wordBeat * 34)}px ${theme.accent}88`
+                    : accentWord
+                      ? `0 0 30px ${theme.accent}33`
+                      : theme.transitionFamily === 'snap' && wordProgress < 0.98
+                        ? `${((1 - wordProgress) * 3.5).toFixed(2)}px 0 ${theme.secondary}55, ${((wordProgress - 1) * 3.5).toFixed(2)}px 0 ${theme.accent}44`
+                        : 'none',
+                  transform:
+                    `translate3d(0,${((1 - wordProgress) * 54).toFixed(2)}px,0) ` +
+                    `rotateX(${((1 - wordProgress) * -12).toFixed(2)}deg) ` +
+                    `scale(${(0.94 + wordProgress * 0.06 + wordBeat * 0.042).toFixed(4)})`,
+                  transformOrigin: 'center bottom',
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
         </div>
         {scene.subheadline ? (
-          <div style={{fontSize: 34, fontWeight: 620, lineHeight: 1.25, marginTop: 26, opacity: 0.68}}>
+          <div
+            style={{
+              fontSize: 31,
+              fontWeight: 650,
+              lineHeight: 1.24,
+              marginTop: 22,
+              opacity: subProgress * 0.66,
+              transform: `translateY(${(1 - subProgress) * 18}px)`,
+            }}
+          >
             {scene.subheadline}
           </div>
         ) : null}
-        <div style={{marginTop: 46}}>
-          <VerticalSceneVisual scene={scene} theme={theme} />
+        <div
+          style={{
+            filter: `brightness(${(1 + narrationBeat.strength * 0.045).toFixed(3)})`,
+            marginTop: layout === 'source' ? 28 : 40,
+            opacity: visualProgress,
+            transform:
+              `translateY(${(1 - visualProgress) * 34}px) ` +
+              `scale(${(0.985 + visualProgress * 0.015 + narrationBeat.strength * 0.01).toFixed(4)})`,
+          }}
+        >
+          <VerticalSceneVisual
+            scene={scene}
+            theme={theme}
+            hasSourceAsset={hasSourceAsset}
+            durationInFrames={durationInFrames}
+            narrationBeat={narrationBeat}
+          />
         </div>
       </div>
+      <div
+        style={{
+          background: `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
+          borderRadius: 99,
+          bottom: 94,
+          boxShadow: `0 0 26px ${theme.accent}55`,
+          height: 6,
+          left: 68,
+          opacity: 0.62,
+          position: 'absolute',
+          width: 92,
+          zIndex: 3,
+        }}
+      />
+      <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
     </AbsoluteFill>
   );
 };
@@ -210,38 +554,73 @@ const VerticalScene = ({scene, theme}: {scene: SceneSpecV1; theme: ChannelTheme}
 const activeCaptionAt = (cues: CaptionCueV1[], seconds: number): CaptionCueV1 | undefined =>
   cues.find((cue) => seconds >= cue.start && seconds < cue.end);
 
+const cueWords = (cue: CaptionCueV1): string[] => {
+  if (cue.word_timings?.length) return cue.word_timings.map((word) => word.text);
+  if (cue.words.length) return cue.words;
+  return cue.text.trim().split(/\s+/).filter(Boolean);
+};
+
 const VerticalCaptionTrack = ({cues, theme}: {cues: CaptionCueV1[]; theme: ChannelTheme}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const cue = activeCaptionAt(cues, frame / fps);
+  const seconds = frame / fps;
+  const cue = activeCaptionAt(cues, seconds);
   if (!cue) return null;
+
+  const words = cueWords(cue);
+  const active = activeWordIndex(cue, seconds);
+  const localFrame = Math.max(0, frame - Math.round(cue.start * fps));
+  const reveal = staggerProgress(localFrame, fps, 0);
 
   return (
     <div
       style={{
-        bottom: 238,
-        left: 70,
+        bottom: 160,
+        left: 54,
         position: 'absolute',
-        right: 150,
+        right: 54,
         textAlign: 'center',
+        transform: `translateY(${(1 - reveal) * 20}px)`,
+        opacity: reveal,
       }}
     >
       <div
         style={{
-          background: theme.captionStyle === 'punch' ? 'rgba(6,5,12,0.9)' : 'rgba(4,8,14,0.84)',
+          backdropFilter: 'blur(20px)',
+          background: theme.captionStyle === 'punch' ? 'rgba(7,4,12,0.80)' : 'rgba(3,8,14,0.74)',
           border: `1px solid ${theme.border}`,
-          borderRadius: theme.captionStyle === 'punch' ? 24 : 18,
-          boxShadow: '0 16px 48px rgba(0,0,0,0.36)',
+          borderRadius: 26,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.34)',
           color: '#FFFFFF',
           display: 'inline-block',
-          fontSize: theme.captionStyle === 'punch' ? 58 : 50,
-          fontWeight: 880,
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: theme.captionStyle === 'punch' ? 57 : 53,
+          fontWeight: 900,
+          letterSpacing: -1.2,
           lineHeight: 1.08,
-          maxWidth: 790,
+          maxWidth: 900,
           padding: '20px 28px 24px',
         }}
       >
-        {cue.text}
+        {words.map((word, index) => (
+          <span
+            key={`${word}-${index}`}
+            style={{
+              background: index === active ? theme.accent : 'transparent',
+              borderRadius: index === active ? 10 : 0,
+              boxShadow: index === active ? `0 0 26px ${theme.accent}44` : 'none',
+              color: index === active ? '#07100D' : '#FFFFFF',
+              display: 'inline-block',
+              margin: '2px 4px',
+              opacity: active >= 0 && Math.abs(index - active) > 4 ? 0.62 : 1,
+              padding: index === active ? '2px 8px 5px' : '2px 3px 5px',
+              textShadow: index === active ? 'none' : '0 2px 14px rgba(0,0,0,.42)',
+              transform: index === active ? 'translateY(-2px) scale(1.075)' : 'scale(1)',
+            }}
+          >
+            {word}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -252,14 +631,30 @@ export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Cha
   const windows = sceneFrameWindows(pkg);
 
   return (
-    <AbsoluteFill style={{background: theme.background}}>
+    <AbsoluteFill style={{background: theme.background, fontFamily: 'Arial, Helvetica, sans-serif'}}>
       {pkg.manifest.audio_path ? <Audio src={staticFile(pkg.manifest.audio_path)} /> : null}
       {pkg.scenes.scenes.map((scene, index) => {
         const window = windows[index];
         if (!window) return null;
+        const editWindow = overlappedSceneWindow(
+          window,
+          index,
+          pkg.scenes.scenes.length,
+          Math.max(8, Math.round(pkg.manifest.fps * 0.28)),
+        );
+        const hasSourceAsset =
+          sceneSupportsVerifiedAsset(scene) &&
+          Boolean(resolveSceneAsset(scene, pkg.assets.records));
         return (
-          <Sequence key={scene.id} from={window.from} durationInFrames={window.durationInFrames}>
-            <VerticalScene scene={scene} theme={theme} />
+          <Sequence key={scene.id} from={editWindow.from} durationInFrames={editWindow.durationInFrames}>
+            <VerticalScene
+              scene={scene}
+              theme={theme}
+              durationInFrames={editWindow.durationInFrames}
+              hasSourceAsset={hasSourceAsset}
+              absoluteFrom={editWindow.from}
+              captions={pkg.captions.cues}
+            />
           </Sequence>
         );
       })}

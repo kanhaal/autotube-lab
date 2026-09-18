@@ -16,6 +16,9 @@ def test_remotion_command_is_argument_safe(tmp_path: Path):
     assert str(out.resolve()) in command
     assert f"--public-dir={package_dir.resolve()}" in command
     assert f"--props={package_dir.resolve() / 'remotion-props.json'}" in command
+    assert "--crf=16" in command
+    assert "--pixel-format=yuv420p" in command
+    assert "--audio-bitrate=192K" in command
 
 
 def test_remotion_runner_resolves_default_npx_shim(monkeypatch):

@@ -133,7 +133,8 @@ class FasterWhisperTranscriber:
         gc.collect()
 
 
-def _to_cues(words) -> tuple[CaptionCue, ...]:
+def _to_cues(words, *, max_words: int = 5) -> tuple[CaptionCue, ...]:
+    max_words = max(2, min(9, int(max_words)))
     cues: list[CaptionCue] = []
     current: list[CaptionWord] = []
     start = None
@@ -148,7 +149,7 @@ def _to_cues(words) -> tuple[CaptionCue, ...]:
         end = timing.end
         current.append(timing)
         punctuation_break = text.endswith((".", "?", "!", ";", ":")) and len(current) >= 2
-        if len(current) >= 7 or punctuation_break:
+        if len(current) >= max_words or punctuation_break:
             cues.append(
                 CaptionCue(
                     start,
@@ -180,6 +181,7 @@ def align_narration(
     transcriber,
     *,
     similarity_threshold: float = 0.82,
+    max_caption_words: int | None = None,
 ) -> tuple[CaptionCue, ...]:
     segments_iter, _ = transcriber.transcribe(str(audio), word_timestamps=True)
     segments = list(segments_iter)
@@ -195,4 +197,6 @@ def align_narration(
             words.extend(segment.words)
     if not words:
         raise CaptionAlignmentError("Transcriber returned no word timestamps")
-    return _to_cues(words)
+    if max_caption_words is None:
+        max_caption_words = int(os.getenv("AUTOTUBE_CAPTION_MAX_WORDS", "5"))
+    return _to_cues(words, max_words=max_caption_words)

@@ -3,7 +3,7 @@ import {describe, expect, it} from 'vitest';
 import {SAFE_MARGIN_X, SAFE_MARGIN_Y} from './SafeFrame';
 import {wrapText} from './Typography';
 import {activeCaptionAt} from './CaptionTrack';
-import {transitionPreset} from '../motion';
+import {motionStyle, transitionPreset} from '../motion';
 
 const cues = [
   {start: 0, end: 1.2, text: 'First phrase', words: ['First', 'phrase']},
@@ -29,6 +29,12 @@ describe('professional visual primitives', () => {
     expect(transitionPreset('cut').kind).toBe('cut');
     expect(transitionPreset('crossfade').durationFrames).toBeGreaterThan(0);
     expect(() => transitionPreset('spin' as never)).toThrow(/transition/i);
+  });
+
+  it('uses dimensional motion rather than flat linear pushes', () => {
+    expect(String(motionStyle('push_up', 4, 30).transform)).toContain('scale(');
+    const zoom = String(motionStyle('slow_zoom', 300, 30).transform);
+    expect(zoom).toMatch(/scale\(1\.0[4-9]/);
   });
 
   it('selects captions using half-open timing ranges', () => {

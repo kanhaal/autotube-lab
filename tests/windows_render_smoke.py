@@ -148,6 +148,47 @@ def main() -> None:
             raise RuntimeError("Windows real-package smoke did not produce a non-empty video")
         print(f"Rendered {out} ({out.stat().st_size} bytes)")
 
+        short_narration = _wav(root / "short-narration.wav", 36, 260)
+        short_audio = mix_episode_audio(
+            short_narration,
+            music,
+            (SfxEvent(sfx, start_ms=5000, volume=0.22),),
+            root / "short-master.wav",
+        )
+        short_plan = parse_scene_plan(
+            {
+                "channel_id": fixture["channel_id"],
+                "format": "short",
+                "scenes": fixture["short"]["scenes"],
+            }
+        )
+        short_captions = tuple(_caption(cue) for cue in fixture["short"]["captions"])
+        short_script = " ".join(scene.narration for scene in short_plan.scenes)
+        short_package = build_render_package(
+            cfg,
+            fixture["title"],
+            short_script,
+            short_plan,
+            short_captions,
+            assets,
+            short_audio,
+            root / "render-package-short",
+            format="short",
+        )
+        short_out = root / "short.mp4"
+        try:
+            runner.render(short_package, composition_id("kernelrush", "short"), short_out)
+        except Exception:
+            log = root / "remotion-render.log"
+            if log.is_file():
+                print("\n===== SHORT REMOTION LOG =====\n")
+                print(log.read_text(encoding="utf-8", errors="replace"))
+            raise
+
+        if not short_out.is_file() or short_out.stat().st_size <= 0:
+            raise RuntimeError("Windows real-package Short smoke did not produce a non-empty video")
+        print(f"Rendered {short_out} ({short_out.stat().st_size} bytes)")
+
 
 if __name__ == "__main__":
     main()

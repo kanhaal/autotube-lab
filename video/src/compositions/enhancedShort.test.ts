@@ -103,4 +103,39 @@ describe('enhanced Short presentation', () => {
 
     expect(activeShortVisual(fallbackPkg, 0)?.asset?.local_path).toBe('images/fallback-s1.png');
   });
+
+
+  it('preloads the incoming source visual during an overlapped edit', () => {
+    const transitionPkg = structuredClone(pkg);
+    transitionPkg.scenes.scenes = [
+      {
+        ...transitionPkg.scenes.scenes[0],
+        id: 's1',
+        narration: 'first',
+        asset_ids: ['source-1'],
+      },
+      {
+        ...transitionPkg.scenes.scenes[0],
+        id: 's2',
+        narration: 'second',
+        asset_ids: ['source-2'],
+      },
+    ];
+    transitionPkg.captions.cues = [{
+      start: 0,
+      end: 30,
+      text: 'first second',
+      words: ['first', 'second'],
+      word_timings: [
+        {text: 'first', start: 0, end: 15},
+        {text: 'second', start: 15, end: 30},
+      ],
+    }];
+    transitionPkg.assets.records = [
+      {...transitionPkg.assets.records[0], id: 'source-1', local_path: 'images/source-1.png', scene_id: 's1'},
+      {...transitionPkg.assets.records[0], id: 'source-2', local_path: 'images/source-2.png', scene_id: 's2'},
+    ];
+
+    expect(activeShortVisual(transitionPkg, 447)?.scene.id).toBe('s2');
+  });
 });

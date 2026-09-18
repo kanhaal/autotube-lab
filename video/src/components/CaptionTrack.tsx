@@ -1,9 +1,16 @@
 import {useCurrentFrame, useVideoConfig} from 'remotion';
 
+import {activeWordIndex, staggerProgress} from '../polish';
 import type {CaptionCueV1} from '../types';
 
 export const activeCaptionAt = (cues: CaptionCueV1[], seconds: number): CaptionCueV1 | undefined =>
   cues.find((cue) => seconds >= cue.start && seconds < cue.end);
+
+const cueWords = (cue: CaptionCueV1): string[] => {
+  if (cue.word_timings?.length) return cue.word_timings.map((word) => word.text);
+  if (cue.words.length) return cue.words;
+  return cue.text.trim().split(/\s+/).filter(Boolean);
+};
 
 export const CaptionTrack = ({
   cues,
@@ -16,39 +23,67 @@ export const CaptionTrack = ({
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const cue = activeCaptionAt(cues, frame / fps);
+  const seconds = frame / fps;
+  const cue = activeCaptionAt(cues, seconds);
   if (!cue) return null;
+
+  const words = cueWords(cue);
+  const active = activeWordIndex(cue, seconds);
+  const reveal = staggerProgress(Math.max(0, frame - Math.round(cue.start * fps)), fps, 0);
 
   return (
     <div
       style={{
-        bottom: energetic ? 96 : 74,
+        bottom: energetic ? 62 : 54,
         boxSizing: 'border-box',
         display: 'flex',
         justifyContent: 'center',
         left: 0,
-        padding: '0 120px',
+        padding: '0 150px',
         position: 'absolute',
         right: 0,
+        transform: `translateY(${(1 - reveal) * 18}px)`,
+        opacity: reveal,
       }}
     >
       <div
         style={{
-          background: 'rgba(4,7,13,0.82)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: energetic ? 16 : 12,
-          boxShadow: '0 12px 34px rgba(0,0,0,0.3)',
+          backdropFilter: 'blur(24px)',
+          background: 'linear-gradient(180deg, rgba(9,12,20,.76), rgba(3,5,10,.64))',
+          border: '1px solid rgba(255,255,255,0.11)',
+          borderRadius: 20,
+          boxShadow: '0 22px 70px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,.055)',
           color: '#FFFFFF',
-          fontSize: energetic ? 38 : 31,
-          fontWeight: 760,
-          lineHeight: 1.15,
-          maxWidth: 1260,
-          padding: energetic ? '16px 24px' : '12px 20px',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: energetic ? 36 : 31,
+          fontWeight: 800,
+          letterSpacing: -0.35,
+          lineHeight: 1.18,
+          maxWidth: 1220,
+          padding: energetic ? '16px 25px 18px' : '14px 23px 16px',
           textAlign: 'center',
         }}
       >
-        {cue.text}
-        <span style={{color: accent}}> </span>
+        {words.map((word, index) => (
+          <span
+            key={`${word}-${index}`}
+            style={{
+              background: energetic && index === active ? accent : 'transparent',
+              borderRadius: energetic && index === active ? 7 : 0,
+              boxShadow: index === active ? `0 0 24px ${accent}33` : 'none',
+              color: index === active ? (energetic ? '#07100D' : accent) : '#FFFFFF',
+              display: 'inline-block',
+              marginRight: index === words.length - 1 ? 0 : 8,
+              opacity: active >= 0 && Math.abs(index - active) > 4 ? 0.62 : 1,
+              padding: energetic && index === active ? '1px 6px 3px' : '1px 1px 3px',
+              textShadow: index === active && !energetic ? `0 0 22px ${accent}55` : 'none',
+              transform: index === active ? 'translateY(-1px) scale(1.065)' : 'scale(1)',
+              transformOrigin: 'center bottom',
+            }}
+          >
+            {word}
+          </span>
+        ))}
       </div>
     </div>
   );
