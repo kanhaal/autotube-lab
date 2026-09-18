@@ -9,7 +9,9 @@ export type EffectKind=
   |'meme_flash'|'freeze_frame'|'kinetic_word_reveal'|'kinetic_infographic'|'progress_reveal'
   |'tag_pop'|'parallax_layers'|'grid_reveal'|'card_flip'|'underline_sweep'|'callout_leader_line'
   |'waveform_overlay'|'chromatic_pulse'|'film_grain'|'vignette_pulse'|'rack_focus'
-  |'screen_shake'|'scanline_flicker'|'duotone_flash';
+  |'screen_shake'|'scanline_flicker'|'duotone_flash'|'light_leak'|'lens_flare'
+  |'particle_burst'|'icon_morph'|'split_screen_multi_angle'|'rule_of_thirds_reframe'
+  |'ken_burns';
 
 export type EffectRenderProps={
   effect:SceneEffectV1;scene:SceneSpecV1;theme:ChannelTheme;assets:AssetRecordV1[];
