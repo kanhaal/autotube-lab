@@ -121,6 +121,37 @@ def test_media_subprocess_decodes_utf8_with_replacement(monkeypatch):
     assert captured["errors"] == "replace"
 
 
+def test_deep_whisper_forces_real_transcription_inference(monkeypatch):
+    from app.captions import align
+    from app.health import media
+
+    calls = {"transcribe": 0, "release": 0}
+
+    class FakeTranscriber:
+        model_size = "small.en"
+        device = "cpu"
+        compute_type = "int8"
+        fallback_reason = "Library cublas64_12.dll is not found or cannot be loaded"
+
+        def transcribe(self, path, word_timestamps=True, vad_filter=True):
+            calls["transcribe"] += 1
+            assert word_timestamps is False
+            assert vad_filter is False
+            return iter([SimpleNamespace(text="")]), SimpleNamespace(language="en")
+
+        def release(self):
+            calls["release"] += 1
+
+    monkeypatch.setattr(media.importlib.util, "find_spec", lambda name: object())
+    monkeypatch.setattr(align, "FasterWhisperTranscriber", FakeTranscriber)
+
+    result = media._deep_whisper()
+
+    assert result["ok"] is True
+    assert calls == {"transcribe": 1, "release": 1}
+    assert "CPU fallback" in result["detail"]
+
+
 def test_media_smoke_missing_tools_are_reported_not_raised(monkeypatch):
     from app.health import media
 
