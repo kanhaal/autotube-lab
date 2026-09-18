@@ -22,8 +22,9 @@ REPAIR_PROMPT = (
 
 COMMON = """You are the visual director for a factual faceless YouTube explainer.
 Use ONLY the supplied approved script and research packet. Do not invent visual facts, statistics,
-quotes, products, interfaces, or source claims. Prefer source/browser/product cards and original
-charts, comparisons, timelines, counters, diagrams, and typography over generic imagery.
+quotes, products, interfaces, or source claims. Prefer verified source media, full-screen browser/UI
+captures, gameplay/B-roll, meaningful detail crops, and original motion graphics over generic imagery.
+Use cards only when a contained UI object is editorially clearer than a full-frame shot.
 Return JSON with channel_id, format='longform', and scenes. Each scene must contain id, narration,
 purpose, scene_type, headline, subheadline, source_ids, asset_ids, motion, emphasis, transition,
 fallback_scene_type, and data. V4 scenes MAY also include shot_style, camera, micro_beats,
