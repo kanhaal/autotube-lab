@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 from app.planning.scene_schema import (
-    MOTIONS,
-    SCENE_TYPES,
-    TRANSITIONS,
-    ScenePlan,
-    parse_scene_plan,
+    EFFECT_KINDS,MOTIONS,SCENE_TYPES,TRANSITIONS,TRANSITION_OUTS,ScenePlan,parse_scene_plan,
 )
 
 REPAIR_PROMPT = (
     "Return one valid JSON object matching the requested scene-plan schema. "
-    "Use only the registered scene types, motions, and transitions."
+    "Use only the registered scene types, motions, transitions, effects, and transition_out values."
 )
 
 COMMON = """You are the visual director for a factual faceless YouTube explainer.
@@ -19,7 +15,10 @@ quotes, products, interfaces, or source claims. Prefer source/browser/product ca
 charts, comparisons, timelines, counters, diagrams, and typography over generic imagery.
 Return JSON with channel_id, format='longform', and scenes. Each scene must contain id, narration,
 purpose, scene_type, headline, subheadline, source_ids, asset_ids, motion, emphasis, transition,
-fallback_scene_type, and data."""
+fallback_scene_type, and data. It MAY also contain an effects array and transition_out.
+Effects are optional and must be used selectively. For stat_count_up, final_value must equal the
+verified number from research and verified_value must store that same verified number. Never invent
+a verified_value. Keep meme_flash requested duration between 0.5 and 1.5 seconds."""
 
 KERNELRUSH = """KernelRush direction: premium technology/editorial atmosphere with restrained
 motion, clean hierarchy, generous spacing, and smooth transitions. Plan approximately 15-25
@@ -29,7 +28,6 @@ LOBBYSIGNAL = """LobbySignal direction: faster gaming and internet-culture edito
 kinetic typography, punchier emphasis, game/store/context cards, timelines, and counters. Plan
 approximately 20-35 semantic scenes for a normal 4-7 minute episode without becoming chaotic."""
 
-
 def _prompt(channel_id: str) -> str:
     if channel_id == "kernelrush":
         channel = KERNELRUSH
@@ -37,24 +35,19 @@ def _prompt(channel_id: str) -> str:
         channel = LOBBYSIGNAL
     else:
         raise ValueError(f"unsupported channel: {channel_id}")
-
     vocabulary = (
         f"\nRegistered scene types: {sorted(SCENE_TYPES)}"
         f"\nRegistered motions: {sorted(MOTIONS)}"
         f"\nRegistered transitions: {sorted(TRANSITIONS)}"
+        f"\nRegistered effects: {sorted(EFFECT_KINDS)}"
+        f"\nRegistered transition_out values: {sorted(TRANSITION_OUTS)}"
     )
     return COMMON + "\n\n" + channel + vocabulary
-
 
 def plan_longform_scenes(channel_id: str, script: str, packet: dict, llm) -> ScenePlan:
     payload = llm.generate_json(
         _prompt(channel_id),
-        {
-            "channel_id": channel_id,
-            "format": "longform",
-            "script": script,
-            "research": packet,
-        },
+        {"channel_id": channel_id,"format": "longform","script": script,"research": packet},
         repair_prompt=REPAIR_PROMPT,
     )
     return parse_scene_plan(payload)
