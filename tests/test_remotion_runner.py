@@ -20,6 +20,7 @@ def test_remotion_command_is_argument_safe(tmp_path: Path):
     assert "--pixel-format=yuv420p" in command
     assert "--audio-bitrate=192K" in command
     assert "--x264-preset=slow" in command
+    assert "--color-space=bt709" in command
     assert "--concurrency=4" in command
 
 
