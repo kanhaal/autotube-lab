@@ -41,6 +41,35 @@ const recordList = (data: Record<string, unknown>, key: string): Array<Record<st
     : [];
 };
 
+
+export const chartPointsForScene = (scene: SceneSpecV1): Array<{label: string; value: number}> => {
+  const explicit = recordList(scene.data, 'points').map((point, index) => ({
+    label: typeof point.label === 'string' ? point.label : `Point ${index + 1}`,
+    value: typeof point.value === 'number' && Number.isFinite(point.value) ? point.value : 0,
+  }));
+  if (explicit.length) return explicit;
+
+  const labels = stringList(scene.data, 'labels');
+  const rawValues = scene.data.values;
+  const values = Array.isArray(rawValues)
+    ? rawValues.filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    : [];
+  return labels.slice(0, values.length).map((label, index) => ({
+    label,
+    value: values[index],
+  }));
+};
+
+export const timelineItemsForScene = (scene: SceneSpecV1): Array<{label: string; detail?: string}> => {
+  const explicit = recordList(scene.data, 'items').map((item, index) => ({
+    label: typeof item.label === 'string' ? item.label : `Step ${index + 1}`,
+    detail: typeof item.detail === 'string' ? item.detail : undefined,
+  }));
+  if (explicit.length) return explicit;
+
+  return stringList(scene.data, 'items').map((label) => ({label}));
+};
+
 const themeColor = (theme: Theme, key: string, fallback: string): string => {
   const value = theme[key];
   return typeof value === 'string' && value ? value : fallback;
@@ -183,10 +212,7 @@ export const StatScene: SceneComponent = (props) => {
 
 export const ChartScene: SceneComponent = (props) => {
   const {scene, theme} = props;
-  const points = recordList(scene.data, 'points').map((point, index) => ({
-    label: typeof point.label === 'string' ? point.label : `Point ${index + 1}`,
-    value: typeof point.value === 'number' ? point.value : 0,
-  }));
+  const points = chartPointsForScene(scene);
   return (
     <SceneShell {...props} eyebrow="TREND">
       <Panel theme={theme}><Chart points={points.length ? points : [{label: 'Now', value: 1}]} accent={accent(theme)} /></Panel>
@@ -196,10 +222,7 @@ export const ChartScene: SceneComponent = (props) => {
 
 export const TimelineScene: SceneComponent = (props) => {
   const {scene, theme} = props;
-  const items = recordList(scene.data, 'items').map((item, index) => ({
-    label: typeof item.label === 'string' ? item.label : `Step ${index + 1}`,
-    detail: typeof item.detail === 'string' ? item.detail : undefined,
-  }));
+  const items = timelineItemsForScene(scene);
   return (
     <SceneShell {...props} eyebrow="TIMELINE">
       <Panel theme={theme}><Timeline items={items.length ? items : [{label: 'Now', detail: supportingText(scene)}]} accent={accent(theme)} /></Panel>
