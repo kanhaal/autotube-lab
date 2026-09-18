@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import json
+
 import pytest
 
 from app.rendering.ffmpeg import MediaProbe
@@ -171,3 +173,92 @@ def test_valid_short_passes_and_enforces_native_vertical_duration(
     report = validation.validate_short(outputs)
     assert report.ok is False
     assert {"wrong_resolution", "short_duration"} <= _codes(report)
+
+
+def _write_effect_scenes(package: Path, *, effects: list[dict], data: dict | None = None) -> None:
+    payload = {
+        "schema_version": "1",
+        "channel_id": "kernelrush",
+        "format": "longform",
+        "scenes": [
+            {
+                "id": "scene-1",
+                "narration": "Verified metric.",
+                "purpose": "evidence",
+                "scene_type": "stat",
+                "headline": "VERIFIED",
+                "subheadline": "",
+                "source_ids": [],
+                "asset_ids": [],
+                "motion": "none",
+                "emphasis": [],
+                "transition": "cut",
+                "fallback_scene_type": "fallback_editorial",
+                "data": data or {},
+                "effects": effects,
+                "transition_out": None,
+            }
+        ],
+    }
+    (package / "scenes.json").write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_v35_qa_rejects_meme_flash_request_over_hard_cap(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    from app.quality import validation
+
+    outputs = _outputs(tmp_path)
+    _write_effect_scenes(
+        outputs.render_package,
+        effects=[{"kind": "meme_flash", "duration_seconds": 2.0}],
+    )
+    monkeypatch.setattr(validation, "probe_media", lambda path: _probe())
+
+    report = validation.validate_longform(outputs, expected_duration=60.0)
+
+    assert report.ok is False
+    assert "meme_flash_duration" in _codes(report)
+
+
+def test_v35_qa_rejects_stat_count_up_that_does_not_match_verified_scene_value(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    from app.quality import validation
+
+    outputs = _outputs(tmp_path)
+    _write_effect_scenes(
+        outputs.render_package,
+        data={"value": 42000},
+        effects=[{"kind": "stat_count_up", "verified_value": 41000}],
+    )
+    monkeypatch.setattr(validation, "probe_media", lambda path: _probe())
+
+    report = validation.validate_longform(outputs, expected_duration=60.0)
+
+    assert report.ok is False
+    assert "stat_count_up_value_mismatch" in _codes(report)
+
+
+def test_v35_qa_accepts_valid_effect_contracts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    from app.quality import validation
+
+    outputs = _outputs(tmp_path)
+    _write_effect_scenes(
+        outputs.render_package,
+        data={"value": 42000},
+        effects=[
+            {"kind": "meme_flash", "duration_seconds": 1.0},
+            {"kind": "stat_count_up", "verified_value": 42000},
+        ],
+    )
+    monkeypatch.setattr(validation, "probe_media", lambda path: _probe())
+
+    report = validation.validate_longform(outputs, expected_duration=60.0)
+
+    assert report.ok is True
