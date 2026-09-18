@@ -17,6 +17,7 @@ from app.config import channel_config
 from app.narration.backend import ConfiguredTTS, select_tts_backend
 from app.narration.fallback import FallbackTTS
 from app.planning.scene_schema import parse_scene_plan
+from app.rendering.history import create_render_run
 from app.rendering.package import build_render_package
 from app.rendering.pipeline import composition_id
 from app.rendering.runner import RemotionRunner
@@ -199,8 +200,8 @@ def render_story(fixture: Path, output_root: Path) -> dict:
     story = json.loads(Path(fixture).read_text(encoding="utf-8"))
     channel_id = story["channel_id"]
     channel_cfg = channel_config(channel_id)
-    target = Path(output_root) / channel_id
-    target.mkdir(parents=True, exist_ok=True)
+    render_run = create_render_run(Path(output_root), channel_id)
+    target = render_run.directory
 
     source_card = _render_local_card(story, target / "source-card.png", channel_cfg)
     fallback_card = _render_local_card(
@@ -243,7 +244,11 @@ def render_story(fixture: Path, output_root: Path) -> dict:
     finally:
         transcriber.release()
 
-    rendered: dict[str, str | list[str]] = {}
+    rendered: dict[str, str | list[str]] = {
+        "run_id": render_run.run_id,
+        "run_dir": str(target.resolve()),
+        "latest_pointer": str(render_run.latest_pointer.resolve()),
+    }
     events = tuple(
         SfxEvent(path=sfx, start_ms=int(float(item["at"]) * 1000), volume=0.25)
         for item in story["audio"]["sfx_events"]
