@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.assets.models import AssetManifest, AssetRecord
 from app.audio.mix import SfxEvent, mix_episode_audio
-from app.audio.sound_design import build_sound_design_events
+from app.audio.sound_design import build_lowpass_windows, build_sound_design_events
 from app.captions.align import FasterWhisperTranscriber, align_narration
 from app.config import channel_config
 from app.narration.backend import ConfiguredTTS, select_tts_backend
@@ -265,11 +265,16 @@ def render_story(fixture: Path, output_root: Path) -> dict:
             out_dir=target / "sound-design",
             channel_id=channel_id,
         )
+        lowpass_windows = build_lowpass_windows(
+            item["plan"],
+            duration_seconds=duration,
+        )
         master = mix_episode_audio(
             item["narration"],
             music,
             tuple(events) + tuple(editorial_events),
             target / f"{format_name}-master.wav",
+            lowpass_windows=lowpass_windows,
         )
         package = build_render_package(
             channel_cfg,
