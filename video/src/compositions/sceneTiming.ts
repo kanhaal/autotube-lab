@@ -106,21 +106,58 @@ const proportionalWindows = (pkg: RenderPackageV1): SceneFrameWindow[] => {
       : Math.round((cumulativeWeight / totalWeight) * totalFrames);
     return {from, durationInFrames: Math.max(1, next - from)};
   });
+  return applyCutBiases(pkg, base);
 };
+
+const applyCutBiases = (
+  pkg: RenderPackageV1,
+  windows: SceneFrameWindow[],
+): SceneFrameWindow[] => {
+  if (windows.length < 2) return windows;
+  const fps = Math.max(1, pkg.manifest.fps || 30);
+  const boundaries = [windows[0].from];
+  for (const window of windows) {
+    boundaries.push(window.from + window.durationInFrames);
+  }
+  const original = [...boundaries];
+
+  for (let boundaryIndex = 1; boundaryIndex < boundaries.length - 1; boundaryIndex += 1) {
+    const scene = pkg.scenes.scenes[boundaryIndex - 1];
+    const bias = scene?.cut_bias ?? 'neutral';
+    const offset = Math.max(
+      0,
+      Math.round(Number(scene?.cut_offset_seconds ?? 0) * fps),
+    );
+    if (!offset || bias === 'neutral') continue;
+
+    const direction = bias === 'visual_lead' ? -1 : bias === 'audio_lead' ? 1 : 0;
+    if (!direction) continue;
+    const desired = original[boundaryIndex] + direction * offset;
+    const minimum = boundaries[boundaryIndex - 1] + 1;
+    const maximum = original[boundaryIndex + 1] - 1;
+    boundaries[boundaryIndex] = Math.max(minimum, Math.min(maximum, desired));
+  }
+
+  return windows.map((_, index) => ({
+    from: boundaries[index],
+    durationInFrames: Math.max(1, boundaries[index + 1] - boundaries[index]),
+  }));
+};
+
 
 export const sceneFrameWindows = (pkg: RenderPackageV1): SceneFrameWindow[] => {
   const scenes = pkg.scenes.scenes;
   if (!scenes.length) return [];
 
   const words = alignedWords(pkg);
-  if (!words.length) return proportionalWindows(pkg);
+  if (!words.length) return applyCutBiases(pkg, proportionalWindows(pkg));
 
   const fps = Math.max(1, pkg.manifest.fps || 30);
   const totalFrames = packageDurationFrames(pkg);
   let wordCursor = 0;
   let previousFrame = 0;
 
-  return scenes.map((scene, index) => {
+  const base = scenes.map((scene, index) => {
     const from = previousFrame;
     let next: number;
     if (index === scenes.length - 1) {
