@@ -17,7 +17,11 @@ import {
   sceneEnvelope,
   staggerProgress,
 } from '../polish';
-import {scenePresentationStyle} from '../scenes/presentation';
+import {
+  resolveSceneAsset,
+  scenePresentationStyle,
+  sceneSupportsVerifiedAsset,
+} from '../scenes/presentation';
 import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
 import type {ChannelTheme} from '../themes/types';
 import {sceneFrameWindows} from './sceneTiming';
@@ -430,9 +434,9 @@ export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Cha
           pkg.scenes.scenes.length,
           Math.max(8, Math.round(pkg.manifest.fps * 0.28)),
         );
-        const hasSourceAsset = scene.asset_ids.some((id) =>
-          pkg.assets.records.some((asset) => asset.id === id),
-        );
+        const hasSourceAsset =
+          sceneSupportsVerifiedAsset(scene) &&
+          Boolean(resolveSceneAsset(scene, pkg.assets.records));
         return (
           <Sequence key={scene.id} from={editWindow.from} durationInFrames={editWindow.durationInFrames}>
             <VerticalScene
