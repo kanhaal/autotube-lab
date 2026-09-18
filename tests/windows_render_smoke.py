@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import struct
 import tempfile
 import wave
 from datetime import datetime, timezone
@@ -10,7 +12,8 @@ from pathlib import Path
 from PIL import Image
 
 from app.assets.models import AssetManifest, AssetRecord
-from app.captions.models import CaptionCue
+from app.audio.mix import SfxEvent, mix_episode_audio
+from app.captions.models import CaptionCue, CaptionWord
 from app.config import channel_config
 from app.planning.scene_schema import parse_scene_plan
 from app.rendering.package import build_render_package
@@ -18,16 +21,19 @@ from app.rendering.pipeline import composition_id
 from app.rendering.runner import RemotionRunner
 
 
-def _wav(path: Path, seconds: int) -> Path:
+def _wav(path: Path, seconds: float, frequency: float = 220.0) -> Path:
     sample_rate = 48000
-    silence = b"\x00\x00" * sample_rate
+    frame_count = int(sample_rate * seconds)
+    amplitude = 1200
+    frames = bytearray()
+    for index in range(frame_count):
+        sample = int(amplitude * math.sin(2 * math.pi * frequency * index / sample_rate))
+        frames.extend(struct.pack("<h", sample))
     with wave.open(str(path), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(sample_rate)
-        for _ in range(seconds):
-            wav.writeframesraw(silence)
-        wav.writeframes(b"")
+        wav.writeframes(bytes(frames))
     return path
 
 
@@ -40,6 +46,22 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _caption(cue: dict) -> CaptionCue:
+    start = float(cue["start"])
+    end = float(cue["end"])
+    words = tuple(cue["text"].split())
+    duration = max(0.001, end - start)
+    timings = tuple(
+        CaptionWord(
+            word,
+            start + duration * (index / len(words)),
+            start + duration * ((index + 1) / len(words)),
+        )
+        for index, word in enumerate(words)
+    )
+    return CaptionCue(start, end, cue["text"], words, timings)
+
+
 def main() -> None:
     fixture = json.loads(
         Path("tests/fixtures/media/kernelrush_story.json").read_text(encoding="utf-8")
@@ -50,7 +72,16 @@ def main() -> None:
         root = Path(tmp)
         source = _png(root / "source-card.png", "#123456")
         fallback = _png(root / "fallback-card.png", "#223344")
-        audio = _wav(root / "master.wav", 42)
+
+        narration = _wav(root / "narration.wav", 42, 220)
+        music = _wav(root / "music.wav", 45, 92)
+        sfx = _wav(root / "sfx.wav", 0.2, 880)
+        audio = mix_episode_audio(
+            narration,
+            music,
+            (SfxEvent(sfx, start_ms=6000, volume=0.25),),
+            root / "master.wav",
+        )
 
         plan = parse_scene_plan(
             {
@@ -59,15 +90,7 @@ def main() -> None:
                 "scenes": fixture["long"]["scenes"],
             }
         )
-        captions = tuple(
-            CaptionCue(
-                float(cue["start"]),
-                float(cue["end"]),
-                cue["text"],
-                tuple(cue["text"].split()),
-            )
-            for cue in fixture["long"]["captions"]
-        )
+        captions = tuple(_caption(cue) for cue in fixture["long"]["captions"])
         now = datetime.now(timezone.utc)
         assets = AssetManifest(
             records=(
