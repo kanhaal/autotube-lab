@@ -10,6 +10,7 @@ import {Timeline} from '../components/Timeline';
 import {layoutForScene, staggerProgress} from '../polish';
 import {
   cinematicCameraStyle,
+  editorialFocusWeight,
   editorialItemStyle,
   headlineWordProgress,
   PremiumVfxBackdrop,
@@ -382,22 +383,49 @@ export const TimelineScene: SceneComponent = (props) => {
   );
 };
 
-const splitScene = (props: SceneProps, eyebrow: string, leftLabel: string, rightLabel: string) => {
+const splitScene = (
+  props: SceneProps,
+  eyebrow: string,
+  leftLabel: string,
+  rightLabel: string,
+  frame: number,
+  fps: number,
+) => {
   const {scene, theme} = props;
   const left = stringValue(scene.data, 'before', stringValue(scene.data, 'left', 'Before'));
   const right = stringValue(scene.data, 'after', stringValue(scene.data, 'right', 'After'));
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
   return (
     <SceneShell {...props} eyebrow={eyebrow}>
-      <div style={{display: 'grid', gap: 28, gridTemplateColumns: '1fr 1fr'}}>
-        <Panel theme={theme}><div style={{fontSize: 20, fontWeight: 800, opacity: 0.5}}>{leftLabel}</div><div style={{fontSize: 34, fontWeight: 750, marginTop: 20}}>{left}</div></Panel>
-        <Panel theme={theme}><div style={{color: accent(theme), fontSize: 20, fontWeight: 800}}>{rightLabel}</div><div style={{fontSize: 34, fontWeight: 750, marginTop: 20}}>{right}</div></Panel>
+      <div style={{display: 'grid', gap: 28, gridTemplateColumns: '1fr 1fr', perspective: 1500}}>
+        <div style={editorialItemStyle(frame, fps, 0, family)}>
+          <Panel theme={theme}>
+            <div style={{fontSize: 20, fontWeight: 800, opacity: 0.5}}>{leftLabel}</div>
+            <div style={{fontSize: 34, fontWeight: 750, marginTop: 20}}>{left}</div>
+          </Panel>
+        </div>
+        <div style={editorialItemStyle(frame, fps, 1, family)}>
+          <Panel theme={theme}>
+            <div style={{color: accent(theme), fontSize: 20, fontWeight: 800}}>{rightLabel}</div>
+            <div style={{fontSize: 34, fontWeight: 750, marginTop: 20}}>{right}</div>
+          </Panel>
+        </div>
       </div>
     </SceneShell>
   );
 };
 
-export const BeforeAfterScene: SceneComponent = (props) => splitScene(props, 'BEFORE / AFTER', 'BEFORE', 'AFTER');
-export const ComparisonScene: SceneComponent = (props) => splitScene(props, 'COMPARISON', 'OPTION A', 'OPTION B');
+export const BeforeAfterScene: SceneComponent = (props) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  return splitScene(props, 'BEFORE / AFTER', 'BEFORE', 'AFTER', frame, fps);
+};
+
+export const ComparisonScene: SceneComponent = (props) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  return splitScene(props, 'COMPARISON', 'OPTION A', 'OPTION B', frame, fps);
+};
 
 export const QuoteScene: SceneComponent = (props) => {
   const {scene, theme} = props;
@@ -436,31 +464,54 @@ export const ProcessScene: SceneComponent = (props) => {
   const {scene, theme} = props;
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const steps = stringList(scene.data, 'steps');
+  const steps = (stringList(scene.data, 'steps').length ? stringList(scene.data, 'steps') : ['Input', 'Process', 'Output']).slice(0, 5);
   const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
+  const duration = props.durationInFrames ?? Math.max(1, fps * 7);
   return (
     <SceneShell {...props} eyebrow="HOW IT WORKS">
-      <div style={{display: 'flex', gap: 18}}>
-        {(steps.length ? steps : ['Input', 'Process', 'Output']).slice(0, 5).map((step, index) => (
-          <div
-            key={`${step}-${index}`}
-            style={{
-              ...editorialItemStyle(frame, fps, index, family),
-              background: index === 0 ? accent(theme) : 'rgba(255,255,255,.07)',
-              border: `1px solid ${index === 0 ? accent(theme) : themeColor(theme, 'border', 'rgba(255,255,255,.14)')}`,
-              borderRadius: 24,
-              boxShadow: index === 0 ? `0 20px 54px ${accent(theme)}22` : '0 18px 48px rgba(0,0,0,.18)',
-              color: index === 0 ? '#06110D' : 'inherit',
-              flex: 1,
-              fontSize: 24,
-              fontWeight: 800,
-              padding: '34px 24px',
-              textAlign: 'center',
-            }}
-          >
-            {step}
-          </div>
-        ))}
+      <div style={{display: 'flex', gap: 18, perspective: 1500}}>
+        {steps.map((step, index) => {
+          const motion = editorialItemStyle(frame, fps, index, family);
+          const focus = editorialFocusWeight(frame, duration, index, steps.length);
+          const motionOpacity = typeof motion.opacity === 'number' ? motion.opacity : 1;
+          const motionTransform = typeof motion.transform === 'string' ? motion.transform : '';
+          return (
+            <div
+              key={`${step}-${index}`}
+              style={{
+                ...motion,
+                background: 'linear-gradient(145deg, rgba(255,255,255,.082), rgba(255,255,255,.035))',
+                border: `1px solid ${themeColor(theme, 'border', 'rgba(255,255,255,.14)')}`,
+                borderRadius: 24,
+                boxShadow: `0 ${Math.round(14 + focus * 10)}px ${Math.round(36 + focus * 24)}px rgba(0,0,0,.22), 0 0 ${Math.round(focus * 36)}px ${accent(theme)}22`,
+                flex: 1,
+                fontSize: 24,
+                fontWeight: 800,
+                opacity: motionOpacity * (0.7 + focus * 0.3),
+                overflow: 'hidden',
+                padding: '34px 24px 38px',
+                position: 'relative',
+                textAlign: 'center',
+                transform: `${motionTransform} scale(${(0.985 + focus * 0.022).toFixed(4)})`,
+              }}
+            >
+              <div style={{position: 'relative', zIndex: 1}}>{step}</div>
+              <div
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${accent(theme)}, transparent)`,
+                  bottom: 0,
+                  height: 4,
+                  left: 18,
+                  opacity: 0.18 + focus * 0.82,
+                  position: 'absolute',
+                  right: 18,
+                  transform: `scaleX(${focus.toFixed(4)})`,
+                  transformOrigin: 'center',
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
     </SceneShell>
   );
