@@ -80,3 +80,25 @@ def test_sound_design_adds_selective_transition_and_effect_hits(tmp_path: Path):
     assert any("ding" in name for name in names)
     assert any("impact" in name for name in names)
     assert len(events) <= 12
+
+
+
+def test_lowpass_reveal_windows_follow_scene_local_timing(tmp_path: Path):
+    from app.audio.sound_design import build_lowpass_windows
+
+    plan = ScenePlan(
+        channel_id="kernelrush",
+        format="longform",
+        scenes=(
+            SceneSpec(
+                "s1",
+                "One two three four.",
+                "hook",
+                "hook",
+                audio_cues=({"at": 1.0, "kind": "lowpass", "duration": 0.7},),
+            ),
+            SceneSpec("s2", "Five six seven eight.", "evidence", "source_browser"),
+        ),
+    )
+
+    assert build_lowpass_windows(plan, duration_seconds=8.0) == ((1000, 700),)
