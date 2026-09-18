@@ -654,7 +654,14 @@ export const sceneComponentFor = (type: string): SceneComponent => {
   return component;
 };
 
-export const SceneRenderer = ({scene, theme, assets}: SceneProps) => {
+export const SceneRenderer = ({scene, theme, assets, durationInFrames}: SceneProps) => {
   const Component = sceneComponentFor(scene.scene_type);
-  return <Component scene={scene} theme={theme} assets={assets} />;
+  return (
+    <Component
+      scene={scene}
+      theme={theme}
+      assets={assets}
+      durationInFrames={durationInFrames}
+    />
+  );
 };
