@@ -6,6 +6,7 @@ import {
   editorialItemStyle,
   editorialLineProgress,
   headlineWordProgress,
+  narrationEmphasisBeat,
   premiumVfxProfile,
   sourceMediaStyle,
   transitionAccentState,
@@ -79,6 +80,29 @@ describe('premium editorial VFX', () => {
     expect(firstSnap).toBeGreaterThan(firstPrecision);
     expect(editorialLineProgress(0, 30, 0, 'precision')).toBe(0);
     expect(editorialLineProgress(60, 30, 4, 'precision')).toBeCloseTo(1, 3);
+  });
+
+  it('only emits narration micro-beats for emphasized words and spoken numbers', () => {
+    const cues = [{
+      start: 1,
+      end: 3,
+      text: 'The model jumps 42 percent today',
+      words: ['The', 'model', 'jumps', '42', 'percent', 'today'],
+      word_timings: [
+        {text: 'The', start: 1.0, end: 1.2},
+        {text: 'model', start: 1.2, end: 1.6},
+        {text: 'jumps', start: 1.6, end: 1.9},
+        {text: '42', start: 1.9, end: 2.2},
+        {text: 'percent', start: 2.2, end: 2.55},
+        {text: 'today', start: 2.55, end: 3.0},
+      ],
+    }];
+
+    expect(narrationEmphasisBeat(cues, 1.4, ['jumps'])).toEqual({word: '', strength: 0});
+    expect(narrationEmphasisBeat(cues, 1.75, ['jumps']).word).toBe('jumps');
+    expect(narrationEmphasisBeat(cues, 1.75, ['jumps']).strength).toBeGreaterThan(0.5);
+    expect(narrationEmphasisBeat(cues, 2.05, []).word).toBe('42');
+    expect(narrationEmphasisBeat(cues, 2.05, []).strength).toBeGreaterThan(0.5);
   });
 
   it('creates a multi-layer transition accent instead of a single flat fade', () => {
