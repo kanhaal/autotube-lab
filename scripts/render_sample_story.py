@@ -46,40 +46,98 @@ def _render_local_card(story: dict, out: Path, channel_cfg: dict, *, fallback: b
     background = brand.get("background", "#080B12")
     foreground = brand.get("foreground", "#F7FAFF")
     accent = brand.get("accent", "#66F2C1")
+    secondary = brand.get("secondary", accent)
     image = Image.new("RGB", (1440, 900), background)
     draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((70, 65, 1370, 835), radius=42, outline=accent, width=6)
-    draw.text(
-        (115, 115),
-        "SAFE EDITORIAL FALLBACK" if fallback else story["source_visual"]["label"],
-        fill=accent,
-        font=_font(48, bold=True),
-    )
-    body = (
-        "Synthetic fixture. No source image was available or required."
-        if fallback
-        else story["source_visual"]["body"]
-    )
-    words = body.split()
-    lines: list[str] = []
-    current = ""
-    for word in words:
-        proposed = f"{current} {word}".strip()
-        if draw.textbbox((0, 0), proposed, font=_font(42))[2] > 1160 and current:
+
+    if fallback:
+        # A safe original editorial graphic, deliberately not a fake website/source screenshot.
+        for x in range(0, 1440, 72):
+            draw.line((x, 0, x, 900), fill="#141B25", width=1)
+        for y in range(0, 900, 72):
+            draw.line((0, y, 1440, y), fill="#141B25", width=1)
+        draw.ellipse((870, -170, 1510, 470), outline=secondary, width=3)
+        draw.ellipse((1010, -40, 1370, 320), outline=accent, width=7)
+        draw.rounded_rectangle((105, 120, 780, 670), radius=52, fill="#0D131D", outline="#1E2937", width=2)
+        draw.text((150, 165), "ORIGINAL EDITORIAL", fill=accent, font=_font(25, bold=True))
+        draw.text((150, 250), "NO SOURCE", fill=foreground, font=_font(72, bold=True))
+        draw.text((150, 335), "IMAGE NEEDED", fill=foreground, font=_font(72, bold=True))
+        draw.rounded_rectangle((150, 480, 380, 530), radius=25, fill=accent)
+        draw.text((178, 492), "SAFE FALLBACK", fill=background, font=_font(22, bold=True))
+        draw.text(
+            (150, 590),
+            "Original motion graphics keep the edit moving.",
+            fill="#A8B3C2",
+            font=_font(25),
+        )
+        draw.line((900, 610, 1270, 610), fill=accent, width=5)
+        draw.line((970, 660, 1330, 660), fill=secondary, width=3)
+        draw.line((1040, 710, 1250, 710), fill="#334155", width=2)
+    else:
+        # Synthetic browser/dashboard fixture that behaves more like real source media.
+        draw.rounded_rectangle((55, 45, 1385, 855), radius=28, fill="#0B1018", outline="#263244", width=2)
+        draw.rounded_rectangle((55, 45, 1385, 122), radius=28, fill="#111925")
+        draw.rectangle((55, 90, 1385, 122), fill="#111925")
+        for index, color in enumerate(("#FF6B6B", "#FFD166", "#66F2C1")):
+            draw.ellipse((86 + index * 34, 72, 104 + index * 34, 90), fill=color)
+        draw.rounded_rectangle((220, 67, 870, 101), radius=17, fill="#080D14")
+        draw.text((247, 73), "local://synthetic-benchmark/dashboard", fill="#75859A", font=_font(17))
+        draw.text((1040, 70), "VERIFIED FIXTURE", fill=accent, font=_font(18, bold=True))
+
+        draw.text((105, 165), story["source_visual"]["label"], fill=foreground, font=_font(48, bold=True))
+        draw.text((105, 225), "Synthetic dashboard • acceptance-test source", fill="#8796AA", font=_font(22))
+
+        body = story["source_visual"]["body"]
+        words = body.split()
+        lines: list[str] = []
+        current = ""
+        for word in words:
+            proposed = f"{current} {word}".strip()
+            if draw.textbbox((0, 0), proposed, font=_font(26))[2] > 580 and current:
+                lines.append(current)
+                current = word
+            else:
+                current = proposed
+        if current:
             lines.append(current)
-            current = word
-        else:
-            current = proposed
-    if current:
-        lines.append(current)
-    for index, line in enumerate(lines[:6]):
-        draw.text((115, 260 + index * 62), line, fill=foreground, font=_font(42))
-    draw.text(
-        (115, 730),
-        f"{channel_cfg.get('name', story['channel_id'])} · LOCAL SAMPLE",
-        fill=foreground,
-        font=_font(30, bold=True),
-    )
+        for index, line in enumerate(lines[:4]):
+            draw.text((105, 305 + index * 42), line, fill="#CBD5E1", font=_font(26))
+
+        # Source-like metadata and state chips.
+        chips = (("LOCAL", accent), ("SYNTHETIC", secondary), ("NO LIVE CLAIM", "#94A3B8"))
+        chip_x = 105
+        for label, color in chips:
+            width = draw.textbbox((0, 0), label, font=_font(17, bold=True))[2] + 42
+            draw.rounded_rectangle((chip_x, 505, chip_x + width, 545), radius=20, outline=color, width=2)
+            draw.text((chip_x + 20, 516), label, fill=color, font=_font(17, bold=True))
+            chip_x += width + 14
+
+        # Dashboard metric cards.
+        draw.rounded_rectangle((105, 610, 335, 760), radius=24, fill="#101925", outline="#223148", width=2)
+        draw.text((132, 638), "BASELINE", fill="#7C8CA1", font=_font(18, bold=True))
+        draw.text((132, 680), "42 ms", fill=foreground, font=_font(43, bold=True))
+        draw.rounded_rectangle((360, 610, 590, 760), radius=24, fill="#101925", outline=accent, width=2)
+        draw.text((387, 638), "TUNED", fill=accent, font=_font(18, bold=True))
+        draw.text((387, 680), "18 ms", fill=accent, font=_font(43, bold=True))
+
+        # Trend panel on the right.
+        draw.rounded_rectangle((665, 165, 1325, 760), radius=30, fill="#0E1622", outline="#213047", width=2)
+        draw.text((710, 205), "QUEUE LATENCY / TEST PASSES", fill="#91A1B5", font=_font(20, bold=True))
+        chart_left, chart_top, chart_right, chart_bottom = 720, 310, 1260, 660
+        for row in range(5):
+            y = chart_top + row * ((chart_bottom - chart_top) // 4)
+            draw.line((chart_left, y, chart_right, y), fill="#1C2A3B", width=1)
+        values = [42, 34, 25, 18]
+        points = []
+        for index, value in enumerate(values):
+            x = chart_left + index * ((chart_right - chart_left) // 3)
+            y = chart_bottom - int((value / 48) * (chart_bottom - chart_top))
+            points.append((x, y))
+            draw.ellipse((x - 8, y - 8, x + 8, y + 8), fill=accent)
+            draw.text((x - 18, chart_bottom + 24), chr(65 + index), fill="#6F8095", font=_font(17, bold=True))
+        draw.line(points, fill=accent, width=5, joint="curve")
+        draw.text((710, 700), "Local synthetic data • 4 passes", fill="#6F8095", font=_font(18))
+
     out.parent.mkdir(parents=True, exist_ok=True)
     image.save(out, format="PNG", optimize=True)
     return out
