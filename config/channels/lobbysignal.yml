@@ -26,4 +26,10 @@ render_effects:
   default_transition_out: glitch_rgb_split
   intro_sting: true
   lower_third: true
+  v4_editor: true
+  gpu_depth: true
+  camera_intensity: 1.12
+  microbeat_strength: 1.08
+  source_first: true
+  caption_mode: editorial
   texture: scanline_grain
