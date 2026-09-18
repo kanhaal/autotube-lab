@@ -9,6 +9,7 @@ import {
 
 import {Chart} from '../components/Chart';
 import {EffectStage} from '../effects/EffectStage';
+import {sceneHasEffect} from '../effects/effectRegistry';
 import {resolveChannelEffectProfile, type ChannelEffectProfile} from '../effects/channelEffects';
 import {Stat} from '../components/Stat';
 import {Timeline} from '../components/Timeline';
@@ -651,6 +652,27 @@ const VerticalCaptionTrack = ({cues, theme}: {cues: CaptionCueV1[]; theme: Chann
   );
 };
 
+const EffectAwareVerticalCaptionTrack = ({pkg, theme}: {pkg: RenderPackageV1; theme: ChannelTheme}) => {
+  const frame = useCurrentFrame();
+  const windows = sceneFrameWindows(pkg);
+  let activeScene: SceneSpecV1 | undefined;
+  for (let index = 0; index < pkg.scenes.scenes.length; index += 1) {
+    const window = windows[index];
+    if (!window) continue;
+    const editWindow = overlappedSceneWindow(
+      window,
+      index,
+      pkg.scenes.scenes.length,
+      Math.max(8, Math.round(pkg.manifest.fps * 0.28)),
+    );
+    if (frame >= editWindow.from && frame < editWindow.from + editWindow.durationInFrames) {
+      activeScene = pkg.scenes.scenes[index];
+    }
+  }
+  if (activeScene && sceneHasEffect(activeScene, 'kinetic_word_reveal')) return null;
+  return <VerticalCaptionTrack cues={pkg.captions.cues} theme={theme} />;
+};
+
 export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: ChannelTheme}) => {
   validateShortPackage(pkg);
   const windows = sceneFrameWindows(pkg);
@@ -688,7 +710,7 @@ export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Cha
           </Sequence>
         );
       })}
-      <VerticalCaptionTrack cues={pkg.captions.cues} theme={theme} />
+      <EffectAwareVerticalCaptionTrack pkg={pkg} theme={theme} />
     </AbsoluteFill>
   );
 };
