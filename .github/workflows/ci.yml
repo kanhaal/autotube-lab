@@ -1,5 +1,12 @@
 name: CI
 on: [push, pull_request]
+
+# Rendering a real Windows package is intentionally expensive. When several
+# commits land quickly on the same branch, keep only the newest validation run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
