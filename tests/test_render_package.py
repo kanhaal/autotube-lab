@@ -50,6 +50,10 @@ def test_build_render_package_is_self_contained_and_uses_relative_paths(tmp_path
         "id": "kernelrush",
         "name": "KernelRush",
         "brand": {"background": "#050A14", "accent": "#67F5C5"},
+        "effects": {
+            "transition_default": "whoosh_zoom",
+            "default_effects": [{"kind": "film_grain", "opacity": 0.03}],
+        },
     }
 
     package_dir = build_render_package(
@@ -80,6 +84,8 @@ def test_build_render_package_is_self_contained_and_uses_relative_paths(tmp_path
     assert manifest["height"] == 1080
     assert manifest["fps"] == 30
     assert manifest["audio_path"] == "audio/narration.wav"
+    assert manifest["theme"]["effects"]["transition_default"] == "whoosh_zoom"
+    assert manifest["theme"]["effects"]["default_effects"][0]["kind"] == "film_grain"
     assert not Path(manifest["audio_path"]).is_absolute()
 
     asset_payload = json.loads((package_dir / "asset-manifest.json").read_text(encoding="utf-8"))
