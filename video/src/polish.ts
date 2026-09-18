@@ -70,3 +70,28 @@ export const layoutForScene = (
   }
   return format === 'short' ? 'hero' : 'story';
 };
+
+
+export type OverlappedSceneWindow = {
+  from: number;
+  durationInFrames: number;
+  preRoll: number;
+  postRoll: number;
+};
+
+export const overlappedSceneWindow = (
+  window: {from: number; durationInFrames: number},
+  index: number,
+  count: number,
+  overlapFrames = 8,
+): OverlappedSceneWindow => {
+  const half = Math.max(0, Math.floor(overlapFrames / 2));
+  const preRoll = index > 0 ? half : 0;
+  const postRoll = index < count - 1 ? half : 0;
+  return {
+    from: Math.max(0, window.from - preRoll),
+    durationInFrames: window.durationInFrames + preRoll + postRoll,
+    preRoll,
+    postRoll,
+  };
+};
