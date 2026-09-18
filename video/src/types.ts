@@ -53,7 +53,7 @@ export type MicroBeatV1 = {
 
 export type AudioCueV1 = {
   at: number;
-  kind: 'whoosh' | 'impact' | 'click' | 'riser' | 'braam' | 'ding' | 'glitch' | 'static';
+  kind: 'whoosh' | 'impact' | 'click' | 'riser' | 'braam' | 'ding' | 'glitch' | 'static' | 'lowpass';
   volume?: number;
 };
 
