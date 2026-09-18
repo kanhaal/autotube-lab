@@ -4,6 +4,7 @@ import {
   cinematicCameraStyle,
   editorialFocusWeight,
   editorialItemStyle,
+  editorialLineProgress,
   headlineWordProgress,
   premiumVfxProfile,
   sourceMediaStyle,
@@ -67,6 +68,17 @@ describe('premium editorial VFX', () => {
     expect(thirdLate).toBeGreaterThan(firstLate);
     expect(firstEarly).toBeLessThanOrEqual(1);
     expect(thirdLate).toBeLessThanOrEqual(1);
+  });
+
+  it('reveals editorial code and quote lines with measured channel-aware cadence', () => {
+    const firstPrecision = editorialLineProgress(12, 30, 0, 'precision');
+    const fourthPrecision = editorialLineProgress(12, 30, 3, 'precision');
+    const firstSnap = editorialLineProgress(12, 30, 0, 'snap');
+
+    expect(firstPrecision).toBeGreaterThan(fourthPrecision);
+    expect(firstSnap).toBeGreaterThan(firstPrecision);
+    expect(editorialLineProgress(0, 30, 0, 'precision')).toBe(0);
+    expect(editorialLineProgress(60, 30, 4, 'precision')).toBeCloseTo(1, 3);
   });
 
   it('creates a multi-layer transition accent instead of a single flat fade', () => {
