@@ -6,6 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from app.assets.models import AssetManifest
+from app.rendering.ffmpeg import probe_media
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -54,6 +55,13 @@ def build_render_package(
     audio_source = Path(audio_path).resolve()
     if not audio_source.is_file():
         raise FileNotFoundError(audio_source)
+    try:
+        audio_probe = probe_media(audio_source)
+    except Exception as exc:  # noqa: BLE001 - package boundary converts probe failures to validation
+        raise ValueError(f"render audio is unreadable: {audio_source}: {exc}") from exc
+    audio_duration = audio_probe.audio_duration or audio_probe.format_duration
+    if not audio_probe.audio_codec or audio_duration <= 0:
+        raise ValueError(f"render audio has no usable audio stream: {audio_source}")
     audio_dest = audio_dir / audio_source.name
     shutil.copy2(audio_source, audio_dest)
 
@@ -83,6 +91,7 @@ def build_render_package(
         "height": height,
         "fps": 30,
         "duration_source": "audio",
+        "duration_seconds": audio_duration,
         "audio_path": audio_dest.relative_to(package_dir).as_posix(),
         "theme": channel_cfg.get("brand", {}),
     }

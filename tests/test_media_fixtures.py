@@ -47,3 +47,12 @@ def test_fixed_media_stories_are_synthetic_and_include_local_source_visual_data(
         assert payload["source_visual"]["kind"] == "generated_local"
         assert payload["source_visual"]["label"]
         assert payload["source_visual"]["body"]
+
+
+def test_sample_short_scripts_match_production_word_count_contract():
+    fixture_dir = Path("tests/fixtures/media")
+    for path in fixture_dir.glob("*_story.json"):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        script = " ".join(scene["narration"] for scene in payload["short"]["scenes"])
+        word_count = len(script.split())
+        assert 70 <= word_count <= 115, f"{path.name} Short has {word_count} words"

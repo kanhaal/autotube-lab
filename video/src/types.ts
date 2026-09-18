@@ -17,6 +17,7 @@ export type RenderManifestV1 = {
   height: number;
   fps: number;
   duration_source: 'audio';
+  duration_seconds?: number;
   audio_path: string;
   theme: Record<string, unknown>;
 };

@@ -53,3 +53,28 @@ def test_remotion_runner_uses_shell_false_and_utf8_decoding(monkeypatch, tmp_pat
     assert kwargs["cwd"] == Path("video").resolve()
     assert kwargs["encoding"] == "utf-8"
     assert kwargs["errors"] == "replace"
+
+
+def test_remotion_runner_failure_surfaces_render_output(monkeypatch, tmp_path: Path):
+    package_dir = tmp_path / "package"
+    package_dir.mkdir()
+    out = tmp_path / "episode.mp4"
+
+    class Result:
+        returncode = 1
+        stdout = "Bundled code successfully\nRendering frames"
+        stderr = "Error: Failed to decode audio asset"
+
+    monkeypatch.setattr("app.rendering.runner.subprocess.run", lambda *args, **kwargs: Result())
+    runner = RemotionRunner(video_dir=Path("video"), npx="npx")
+
+    try:
+        runner.render(package_dir, "KernelRushLong", out)
+    except RuntimeError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("runner should raise when Remotion exits non-zero")
+
+    assert "Failed to decode audio asset" in message
+    assert "Rendering frames" in message
+    assert "remotion-render.log" in message

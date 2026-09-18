@@ -92,8 +92,20 @@ class RemotionRunner:
                 + (result.stderr or ""),
                 encoding="utf-8",
             )
+            stdout_tail = (result.stdout or "").strip()[-2000:]
+            stderr_tail = (result.stderr or "").strip()[-4000:]
+            details = "\n".join(
+                part
+                for part in (
+                    f"STDERR:\n{stderr_tail}" if stderr_tail else "",
+                    f"STDOUT:\n{stdout_tail}" if stdout_tail else "",
+                )
+                if part
+            )
+            suffix = f"\n{details}" if details else ""
             raise RuntimeError(
-                f"Remotion render failed with exit code {result.returncode}; see {log_path}"
+                f"Remotion render failed with exit code {result.returncode}; "
+                f"see {log_path}{suffix}"
             )
         if not output.is_file():
             raise RuntimeError(f"Remotion reported success but did not create {output}")

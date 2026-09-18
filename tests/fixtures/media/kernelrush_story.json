@@ -11,46 +11,356 @@
   "audio": {
     "music_cue": "synthetic_pulse_bed",
     "sfx_events": [
-      {"at": 6.0, "kind": "soft_hit"},
-      {"at": 24.0, "kind": "transition_tick"}
+      {
+        "at": 6,
+        "kind": "soft_hit"
+      },
+      {
+        "at": 24,
+        "kind": "transition_tick"
+      }
     ]
   },
   "long": {
     "duration": 42,
     "scenes": [
-      {"id":"kr-long-source","narration":"This local benchmark note is synthetic and exists only to exercise the verified source layout.","purpose":"evidence","scene_type":"source_browser","headline":"LOCAL BENCHMARK NOTE","subheadline":"Generated fixture, not a live claim","source_ids":[],"asset_ids":["source-card"],"motion":"slow_zoom","emphasis":["synthetic","local"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{}},
-      {"id":"kr-long-stat","narration":"The fictional queue latency drops from forty two milliseconds to eighteen.","purpose":"metric","scene_type":"stat","headline":"QUEUE LATENCY DROPS","subheadline":"Synthetic benchmark","source_ids":[],"asset_ids":[],"motion":"punch_in","emphasis":["18 ms"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"value":18,"suffix":" ms","label":"fictional queue latency"}},
-      {"id":"kr-long-chart","narration":"A generated chart shows the made up latency trend moving downward across four test passes.","purpose":"explain","scene_type":"chart","headline":"FOUR TEST PASSES","subheadline":"Locally generated values","source_ids":[],"asset_ids":[],"motion":"push_up","emphasis":["trend"],"transition":"slide","fallback_scene_type":"fallback_editorial","data":{"labels":["A","B","C","D"],"values":[42,34,25,18]}},
-      {"id":"kr-long-timeline","narration":"The synthetic timeline moves from baseline to scheduler change to validation and final pass.","purpose":"sequence","scene_type":"timeline","headline":"TEST SEQUENCE","subheadline":"Four fictional checkpoints","source_ids":[],"asset_ids":[],"motion":"push_left","emphasis":["validation"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{"items":["Baseline","Scheduler change","Validation","Final pass"]}},
-      {"id":"kr-long-comparison","narration":"The comparison keeps the distinction simple: a slower fictional baseline and a faster fictional tuned state.","purpose":"comparison","scene_type":"comparison","headline":"BASELINE VS TUNED","subheadline":"Synthetic comparison","source_ids":[],"asset_ids":[],"motion":"parallax","emphasis":["baseline","tuned"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"left":"42 ms baseline","right":"18 ms tuned"}},
-      {"id":"kr-long-fallback","narration":"Finally the editorial fallback proves the renderer still has a safe visual when no verified image is available.","purpose":"fallback","scene_type":"fallback_editorial","headline":"SAFE EDITORIAL FALLBACK","subheadline":"Local graphic path","source_ids":[],"asset_ids":["fallback-card"],"motion":"fade","emphasis":["fallback"],"transition":"cut","fallback_scene_type":"fallback_editorial","data":{}}
+      {
+        "id": "kr-long-source",
+        "narration": "This local benchmark note is synthetic and exists only to exercise the verified source layout.",
+        "purpose": "evidence",
+        "scene_type": "source_browser",
+        "headline": "LOCAL BENCHMARK NOTE",
+        "subheadline": "Generated fixture, not a live claim",
+        "source_ids": [],
+        "asset_ids": [
+          "source-card"
+        ],
+        "motion": "slow_zoom",
+        "emphasis": [
+          "synthetic",
+          "local"
+        ],
+        "transition": "crossfade",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {}
+      },
+      {
+        "id": "kr-long-stat",
+        "narration": "The fictional queue latency drops from forty two milliseconds to eighteen.",
+        "purpose": "metric",
+        "scene_type": "stat",
+        "headline": "QUEUE LATENCY DROPS",
+        "subheadline": "Synthetic benchmark",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "punch_in",
+        "emphasis": [
+          "18 ms"
+        ],
+        "transition": "wipe",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "value": 18,
+          "suffix": " ms",
+          "label": "fictional queue latency"
+        }
+      },
+      {
+        "id": "kr-long-chart",
+        "narration": "A generated chart shows the made up latency trend moving downward across four test passes.",
+        "purpose": "explain",
+        "scene_type": "chart",
+        "headline": "FOUR TEST PASSES",
+        "subheadline": "Locally generated values",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "push_up",
+        "emphasis": [
+          "trend"
+        ],
+        "transition": "slide",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "labels": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "values": [
+            42,
+            34,
+            25,
+            18
+          ]
+        }
+      },
+      {
+        "id": "kr-long-timeline",
+        "narration": "The synthetic timeline moves from baseline to scheduler change to validation and final pass.",
+        "purpose": "sequence",
+        "scene_type": "timeline",
+        "headline": "TEST SEQUENCE",
+        "subheadline": "Four fictional checkpoints",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "push_left",
+        "emphasis": [
+          "validation"
+        ],
+        "transition": "crossfade",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "items": [
+            "Baseline",
+            "Scheduler change",
+            "Validation",
+            "Final pass"
+          ]
+        }
+      },
+      {
+        "id": "kr-long-comparison",
+        "narration": "The comparison keeps the distinction simple: a slower fictional baseline and a faster fictional tuned state.",
+        "purpose": "comparison",
+        "scene_type": "comparison",
+        "headline": "BASELINE VS TUNED",
+        "subheadline": "Synthetic comparison",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "parallax",
+        "emphasis": [
+          "baseline",
+          "tuned"
+        ],
+        "transition": "wipe",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "left": "42 ms baseline",
+          "right": "18 ms tuned"
+        }
+      },
+      {
+        "id": "kr-long-fallback",
+        "narration": "Finally the editorial fallback proves the renderer still has a safe visual when no verified image is available.",
+        "purpose": "fallback",
+        "scene_type": "fallback_editorial",
+        "headline": "SAFE EDITORIAL FALLBACK",
+        "subheadline": "Local graphic path",
+        "source_ids": [],
+        "asset_ids": [
+          "fallback-card"
+        ],
+        "motion": "fade",
+        "emphasis": [
+          "fallback"
+        ],
+        "transition": "cut",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {}
+      }
     ],
     "captions": [
-      {"start":0,"end":7,"text":"This local benchmark note is synthetic and exists only to exercise the verified source layout."},
-      {"start":7,"end":14,"text":"The fictional queue latency drops from forty two milliseconds to eighteen."},
-      {"start":14,"end":21,"text":"A generated chart shows the made up latency trend moving downward across four test passes."},
-      {"start":21,"end":28,"text":"The synthetic timeline moves from baseline to scheduler change to validation and final pass."},
-      {"start":28,"end":35,"text":"The comparison keeps the distinction simple: a slower fictional baseline and a faster fictional tuned state."},
-      {"start":35,"end":42,"text":"Finally the editorial fallback proves the renderer still has a safe visual when no verified image is available."}
+      {
+        "start": 0,
+        "end": 7,
+        "text": "This local benchmark note is synthetic and exists only to exercise the verified source layout."
+      },
+      {
+        "start": 7,
+        "end": 14,
+        "text": "The fictional queue latency drops from forty two milliseconds to eighteen."
+      },
+      {
+        "start": 14,
+        "end": 21,
+        "text": "A generated chart shows the made up latency trend moving downward across four test passes."
+      },
+      {
+        "start": 21,
+        "end": 28,
+        "text": "The synthetic timeline moves from baseline to scheduler change to validation and final pass."
+      },
+      {
+        "start": 28,
+        "end": 35,
+        "text": "The comparison keeps the distinction simple: a slower fictional baseline and a faster fictional tuned state."
+      },
+      {
+        "start": 35,
+        "end": 42,
+        "text": "Finally the editorial fallback proves the renderer still has a safe visual when no verified image is available."
+      }
     ]
   },
   "short": {
     "duration": 36,
     "scenes": [
-      {"id":"kr-short-source","narration":"This source card is generated locally and carries no live claim.","purpose":"evidence","scene_type":"source_browser","headline":"LOCAL SOURCE CARD","subheadline":"Synthetic fixture","source_ids":[],"asset_ids":["source-card"],"motion":"punch_in","emphasis":["local"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{}},
-      {"id":"kr-short-stat","narration":"Our fake benchmark falls from forty two milliseconds to eighteen.","purpose":"metric","scene_type":"stat","headline":"42 TO 18 MS","subheadline":"Synthetic only","source_ids":[],"asset_ids":[],"motion":"punch_in","emphasis":["18"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"value":18,"suffix":" ms","label":"fictional latency"}},
-      {"id":"kr-short-chart","narration":"The generated chart gives the renderer a fast vertical data beat.","purpose":"explain","scene_type":"chart","headline":"TREND DOWN","subheadline":"Four local values","source_ids":[],"asset_ids":[],"motion":"push_up","emphasis":["trend"],"transition":"slide","fallback_scene_type":"fallback_editorial","data":{"labels":["A","B","C","D"],"values":[42,34,25,18]}},
-      {"id":"kr-short-timeline","narration":"Then the timeline checks compact phone first sequencing.","purpose":"sequence","scene_type":"timeline","headline":"FOUR CHECKPOINTS","subheadline":"Native vertical pacing","source_ids":[],"asset_ids":[],"motion":"push_left","emphasis":["checkpoints"],"transition":"crossfade","fallback_scene_type":"fallback_editorial","data":{"items":["Base","Change","Check","Pass"]}},
-      {"id":"kr-short-comparison","narration":"The comparison shows the fictional baseline beside the tuned state.","purpose":"comparison","scene_type":"comparison","headline":"BASE VS TUNED","subheadline":"Synthetic comparison","source_ids":[],"asset_ids":[],"motion":"parallax","emphasis":["tuned"],"transition":"wipe","fallback_scene_type":"fallback_editorial","data":{"left":"42 ms","right":"18 ms"}},
-      {"id":"kr-short-fallback","narration":"And the safe fallback closes the sample without inventing evidence.","purpose":"fallback","scene_type":"fallback_editorial","headline":"SAFE FALLBACK","subheadline":"No invented evidence","source_ids":[],"asset_ids":["fallback-card"],"motion":"fade","emphasis":["safe"],"transition":"cut","fallback_scene_type":"fallback_editorial","data":{}}
+      {
+        "id": "kr-short-source",
+        "narration": "This source card is generated locally and carries no live claim. It exists only for renderer verification.",
+        "purpose": "evidence",
+        "scene_type": "source_browser",
+        "headline": "LOCAL SOURCE CARD",
+        "subheadline": "Synthetic fixture",
+        "source_ids": [],
+        "asset_ids": [
+          "source-card"
+        ],
+        "motion": "punch_in",
+        "emphasis": [
+          "local"
+        ],
+        "transition": "crossfade",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {}
+      },
+      {
+        "id": "kr-short-stat",
+        "narration": "Our fake benchmark falls from forty two milliseconds to eighteen. The numbers are intentionally fictional.",
+        "purpose": "metric",
+        "scene_type": "stat",
+        "headline": "42 TO 18 MS",
+        "subheadline": "Synthetic only",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "punch_in",
+        "emphasis": [
+          "18"
+        ],
+        "transition": "wipe",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "value": 18,
+          "suffix": " ms",
+          "label": "fictional latency"
+        }
+      },
+      {
+        "id": "kr-short-chart",
+        "narration": "The generated chart gives the renderer a fast vertical data beat. Nothing here describes a real product.",
+        "purpose": "explain",
+        "scene_type": "chart",
+        "headline": "TREND DOWN",
+        "subheadline": "Four local values",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "push_up",
+        "emphasis": [
+          "trend"
+        ],
+        "transition": "slide",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "labels": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "values": [
+            42,
+            34,
+            25,
+            18
+          ]
+        }
+      },
+      {
+        "id": "kr-short-timeline",
+        "narration": "Then the timeline checks compact phone first sequencing without referencing any real event.",
+        "purpose": "sequence",
+        "scene_type": "timeline",
+        "headline": "FOUR CHECKPOINTS",
+        "subheadline": "Native vertical pacing",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "push_left",
+        "emphasis": [
+          "checkpoints"
+        ],
+        "transition": "crossfade",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "items": [
+            "Base",
+            "Change",
+            "Check",
+            "Pass"
+          ]
+        }
+      },
+      {
+        "id": "kr-short-comparison",
+        "narration": "The comparison shows the fictional baseline beside the tuned state so the layout can be inspected.",
+        "purpose": "comparison",
+        "scene_type": "comparison",
+        "headline": "BASE VS TUNED",
+        "subheadline": "Synthetic comparison",
+        "source_ids": [],
+        "asset_ids": [],
+        "motion": "parallax",
+        "emphasis": [
+          "tuned"
+        ],
+        "transition": "wipe",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {
+          "left": "42 ms",
+          "right": "18 ms"
+        }
+      },
+      {
+        "id": "kr-short-fallback",
+        "narration": "And the safe fallback closes the sample without inventing evidence. This ends the vertical acceptance test.",
+        "purpose": "fallback",
+        "scene_type": "fallback_editorial",
+        "headline": "SAFE FALLBACK",
+        "subheadline": "No invented evidence",
+        "source_ids": [],
+        "asset_ids": [
+          "fallback-card"
+        ],
+        "motion": "fade",
+        "emphasis": [
+          "safe"
+        ],
+        "transition": "cut",
+        "fallback_scene_type": "fallback_editorial",
+        "data": {}
+      }
     ],
     "captions": [
-      {"start":0,"end":6,"text":"This source card is generated locally and carries no live claim."},
-      {"start":6,"end":12,"text":"Our fake benchmark falls from forty two milliseconds to eighteen."},
-      {"start":12,"end":18,"text":"The generated chart gives the renderer a fast vertical data beat."},
-      {"start":18,"end":24,"text":"Then the timeline checks compact phone first sequencing."},
-      {"start":24,"end":30,"text":"The comparison shows the fictional baseline beside the tuned state."},
-      {"start":30,"end":36,"text":"And the safe fallback closes the sample without inventing evidence."}
+      {
+        "start": 0,
+        "end": 6,
+        "text": "This source card is generated locally and carries no live claim. It exists only for renderer verification."
+      },
+      {
+        "start": 6,
+        "end": 12,
+        "text": "Our fake benchmark falls from forty two milliseconds to eighteen. The numbers are intentionally fictional."
+      },
+      {
+        "start": 12,
+        "end": 18,
+        "text": "The generated chart gives the renderer a fast vertical data beat. Nothing here describes a real product."
+      },
+      {
+        "start": 18,
+        "end": 24,
+        "text": "Then the timeline checks compact phone first sequencing without referencing any real event."
+      },
+      {
+        "start": 24,
+        "end": 30,
+        "text": "The comparison shows the fictional baseline beside the tuned state so the layout can be inspected."
+      },
+      {
+        "start": 30,
+        "end": 36,
+        "text": "And the safe fallback closes the sample without inventing evidence. This ends the vertical acceptance test."
+      }
     ]
   }
 }

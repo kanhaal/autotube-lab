@@ -22,7 +22,11 @@ const wordCount = (text: string): number => tokenize(text).length;
 export const packageDurationFrames = (pkg: RenderPackageV1): number => {
   const fps = Math.max(1, pkg.manifest.fps || 30);
   const captionEnd = pkg.captions.cues.reduce((latest, cue) => Math.max(latest, cue.end), 0);
-  if (captionEnd > 0) return Math.max(1, Math.round(captionEnd * fps));
+  const audioDuration = Number.isFinite(pkg.manifest.duration_seconds)
+    ? Math.max(0, pkg.manifest.duration_seconds ?? 0)
+    : 0;
+  const timedDuration = Math.max(audioDuration, captionEnd);
+  if (timedDuration > 0) return Math.max(1, Math.round(timedDuration * fps));
   const narrationWords = pkg.scenes.scenes.reduce((total, scene) => total + Math.max(1, wordCount(scene.narration)), 0);
   return Math.max(fps, Math.round((narrationWords / 2.5) * fps));
 };

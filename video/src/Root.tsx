@@ -4,6 +4,7 @@ import {KernelRushLong} from './compositions/KernelRushLong';
 import {KernelRushShort} from './compositions/KernelRushShort';
 import {LobbySignalLong} from './compositions/LobbySignalLong';
 import {LobbySignalShort} from './compositions/LobbySignalShort';
+import {packageDurationFrames} from './compositions/sceneTiming';
 import {shortDurationFrames, validateShortPackage} from './compositions/shortTiming';
 import type {RenderPackageV1} from './types';
 
@@ -25,17 +26,10 @@ const Placeholder = () => (
 
 type RenderInput = {pkg?: RenderPackageV1};
 
-const packageDurationFrames = (pkg: RenderPackageV1 | undefined): number => {
-  if (!pkg) return 30;
-  const fps = Math.max(1, pkg.manifest.fps || 30);
-  const cueEnd = pkg.captions.cues.reduce((latest, cue) => Math.max(latest, cue.end), 0);
-  return Math.max(1, Math.ceil(Math.max(cueEnd, 1) * fps));
-};
-
 const longMetadata = (rawProps: unknown) => {
   const props = rawProps as RenderInput;
   return {
-    durationInFrames: packageDurationFrames(props.pkg),
+    durationInFrames: props.pkg ? packageDurationFrames(props.pkg) : 30,
     fps: props.pkg?.manifest.fps ?? 30,
     width: props.pkg?.manifest.width ?? 1920,
     height: props.pkg?.manifest.height ?? 1080,

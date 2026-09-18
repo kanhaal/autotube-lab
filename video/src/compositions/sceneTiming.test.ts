@@ -102,4 +102,23 @@ describe('scene timing', () => {
       {from: 24, durationInFrames: 96},
     ]);
   });
+
+
+  it('uses packaged audio duration as the authoritative minimum render length', () => {
+    const audioTimed = structuredClone(pkg) as RenderPackageV1 & {
+      manifest: RenderPackageV1['manifest'] & {duration_seconds: number};
+    };
+    audioTimed.manifest.duration_seconds = 5;
+    audioTimed.captions.cues = [
+      {start: 0, end: 1, text: 'one two', words: ['one', 'two']},
+    ];
+
+    expect(sceneFrameWindows(audioTimed).at(-1)).toEqual({
+      from: expect.any(Number),
+      durationInFrames: expect.any(Number),
+    });
+    const windows = sceneFrameWindows(audioTimed);
+    const end = windows.at(-1)!;
+    expect(end.from + end.durationInFrames).toBe(150);
+  });
 });
