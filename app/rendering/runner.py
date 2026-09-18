@@ -22,7 +22,7 @@ class RemotionRunner:
             self.npx,"remotion","render","src/index.ts",composition,str(output),
             f"--public-dir={package_root}",f"--props={props_path}",
             "--codec=h264","--audio-codec=aac","--crf=14","--pixel-format=yuv420p",
-            "--audio-bitrate=192K","--x264-preset=slow",f"--concurrency={concurrency}",
+            "--audio-bitrate=192K","--x264-preset=slow","--color-space=bt709",f"--concurrency={concurrency}",
         ]
 
     def _write_props(self, package_dir: Path) -> Path:
