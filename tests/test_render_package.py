@@ -88,7 +88,7 @@ def test_build_render_package_is_self_contained_and_uses_relative_paths(tmp_path
     assert local_path.startswith("images/")
     assert not Path(local_path).is_absolute()
     assert (package_dir / local_path).read_bytes() == b"png-data"
-    assert (package_dir / manifest["audio_path"]).read_bytes() == b"wav-data"
+    assert (package_dir / manifest["audio_path"]).read_bytes() == narration.read_bytes()
 
 
 def test_build_render_package_rejects_source_paths_that_escape_declared_root(tmp_path: Path):
