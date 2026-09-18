@@ -27,7 +27,7 @@ def _existing_file(value:object)->Path|None:
 
 def _probe_video(path:Path,issues:list[QualityIssue])->MediaProbe|None:
     try: return probe_media(path)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - hard QA converts probe failures to evidence
         issues.append(QualityIssue("unreadable_media",f"FFprobe failed for {path}: {exc}")); return None
 
 def _validate_probe(probe:MediaProbe,*,expected_resolution:tuple[int,int],issues:list[QualityIssue])->None:
