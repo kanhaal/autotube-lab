@@ -61,15 +61,36 @@ const transitionStyle = (
     [0, 1],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'},
   );
+  const eased = progress * progress * (3 - 2 * progress);
   switch (name) {
     case 'crossfade':
-      return {opacity: progress};
-    case 'wipe':
-      return {clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)`};
+      return {
+        filter: `blur(${((1 - eased) * 7).toFixed(2)}px)`,
+        opacity: eased,
+        transform: `scale(${(0.985 + eased * 0.015).toFixed(4)})`,
+      };
+    case 'wipe': {
+      const edge = Math.min(112, eased * 112);
+      const lowerEdge = Math.max(0, edge - 10);
+      return {
+        clipPath: `polygon(0 0, ${edge}% 0, ${lowerEdge}% 100%, 0 100%)`,
+        filter: `blur(${((1 - eased) * 2.4).toFixed(2)}px)`,
+      };
+    }
     case 'slide':
-      return {opacity: progress, transform: `translateX(${(1 - progress) * 90}px)`};
+      return {
+        filter: `blur(${((1 - eased) * 4).toFixed(2)}px)`,
+        opacity: eased,
+        transform:
+          `perspective(1400px) translate3d(${((1 - eased) * 110).toFixed(2)}px,0,0) ` +
+          `scale(${(0.975 + eased * 0.025).toFixed(4)}) rotateY(${((1 - eased) * -2.2).toFixed(2)}deg)`,
+      };
     case 'stinger':
-      return {opacity: progress, transform: `scale(${0.96 + progress * 0.04})`};
+      return {
+        filter: `blur(${((1 - eased) * 5).toFixed(2)}px) brightness(${(1.18 - eased * 0.18).toFixed(3)})`,
+        opacity: eased,
+        transform: `scale(${(0.92 + eased * 0.08).toFixed(4)}) rotateZ(${((1 - eased) * -0.8).toFixed(2)}deg)`,
+      };
     case 'cut':
     default:
       return {};
