@@ -8,7 +8,7 @@ from app.assets.models import AssetManifest
 from app.assets.service import prepare_assets
 from app.audio.library import AudioLibrary
 from app.audio.mix import mix_episode_audio
-from app.audio.sound_design import build_sound_design_events
+from app.audio.sound_design import build_lowpass_windows, build_sound_design_events
 from app.captions.align import FasterWhisperTranscriber, align_narration
 from app.editorial.ollama import OllamaJsonClient
 from app.rendering.package import build_render_package
@@ -88,7 +88,21 @@ def _master_audio(
             out_dir=Path(out).parent / "sound-design",
             channel_id=channel_id,
         )
-    return Path(mix_episode_audio(Path(narration), music, events, Path(out)))
+        lowpass_windows = build_lowpass_windows(
+            scene_plan,
+            duration_seconds=duration,
+        )
+    else:
+        lowpass_windows = ()
+    return Path(
+        mix_episode_audio(
+            Path(narration),
+            music,
+            events,
+            Path(out),
+            lowpass_windows=lowpass_windows,
+        )
+    )
 
 
 def render_professional_episode(
