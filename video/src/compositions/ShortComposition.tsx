@@ -29,10 +29,12 @@ import {
   editorialItemStyle,
   editorialLineProgress,
   headlineWordProgress,
+  narrationEmphasisBeat,
   PremiumVfxBackdrop,
   TransitionAccent,
 } from '../vfx';
 import type {ChannelTheme} from '../themes/types';
+import type {NarrationBeatState} from '../vfx';
 import {sceneFrameWindows} from './sceneTiming';
 import {validateShortPackage} from './shortTiming';
 
@@ -104,11 +106,13 @@ const VerticalSceneVisual = ({
   theme,
   hasSourceAsset,
   durationInFrames,
+  narrationBeat,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
   hasSourceAsset: boolean;
   durationInFrames: number;
+  narrationBeat?: NarrationBeatState;
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -120,7 +124,14 @@ const VerticalSceneVisual = ({
   if (scene.scene_type === 'stat') {
     return (
       <VerticalPanel theme={theme}>
-        <div style={{color: theme.accent}}>
+        <div
+          style={{
+            color: theme.accent,
+            filter: `brightness(${(1 + (narrationBeat?.strength ?? 0) * 0.08).toFixed(3)})`,
+            transform: `scale(${(1 + (narrationBeat?.strength ?? 0) * 0.028).toFixed(4)})`,
+            transformOrigin: 'left center',
+          }}
+        >
           <Stat
             label={dataText(scene, 'label', scene.subheadline || 'Key metric')}
             value={dataNumber(scene, 'value') ?? 0}
@@ -357,11 +368,15 @@ const VerticalScene = ({
   theme,
   durationInFrames,
   hasSourceAsset,
+  absoluteFrom,
+  captions,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
   durationInFrames: number;
   hasSourceAsset: boolean;
+  absoluteFrom: number;
+  captions: CaptionCueV1[];
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -391,6 +406,12 @@ const VerticalScene = ({
       .map((value) => value.replace(/[^a-z0-9]/g, ''))
       .filter(Boolean),
   );
+  const narrationBeat = narrationEmphasisBeat(
+    captions,
+    (absoluteFrom + frame) / Math.max(1, fps),
+    scene.emphasis,
+  );
+  const beatToken = narrationBeat.word.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   return (
     <AbsoluteFill
@@ -444,7 +465,10 @@ const VerticalScene = ({
           {headlineWords.map((word, index) => {
             const wordProgress = headlineWordProgress(frame, fps, index);
             const normalized = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const beatMatch = Boolean(beatToken) && normalized === beatToken;
+            const wordBeat = beatMatch ? narrationBeat.strength : 0;
             const accentWord =
+              beatMatch ||
               emphasisWords.has(normalized) ||
               (headlineWords.length <= 7 && index === headlineWords.length - 1);
             return (
@@ -453,15 +477,20 @@ const VerticalScene = ({
                 style={{
                   color: accentWord ? theme.accent : '#FFFFFF',
                   display: 'inline-block',
-                  filter: `blur(${((1 - wordProgress) * 9).toFixed(2)}px)`,
+                  filter: `blur(${((1 - wordProgress) * 9).toFixed(2)}px) brightness(${(1 + wordBeat * 0.16).toFixed(3)})`,
                   marginRight: 16,
                   opacity: wordProgress,
-                  textShadow: accentWord
-                    ? `0 0 30px ${theme.accent}33`
-                    : theme.transitionFamily === 'snap' && wordProgress < 0.98
-                      ? `${((1 - wordProgress) * 3.5).toFixed(2)}px 0 ${theme.secondary}55, ${((wordProgress - 1) * 3.5).toFixed(2)}px 0 ${theme.accent}44`
-                      : 'none',
-                  transform: `translate3d(0,${((1 - wordProgress) * 54).toFixed(2)}px,0) rotateX(${((1 - wordProgress) * -12).toFixed(2)}deg) scale(${(0.94 + wordProgress * 0.06).toFixed(3)})`,
+                  textShadow: beatMatch
+                    ? `0 0 ${Math.round(28 + wordBeat * 34)}px ${theme.accent}88`
+                    : accentWord
+                      ? `0 0 30px ${theme.accent}33`
+                      : theme.transitionFamily === 'snap' && wordProgress < 0.98
+                        ? `${((1 - wordProgress) * 3.5).toFixed(2)}px 0 ${theme.secondary}55, ${((wordProgress - 1) * 3.5).toFixed(2)}px 0 ${theme.accent}44`
+                        : 'none',
+                  transform:
+                    `translate3d(0,${((1 - wordProgress) * 54).toFixed(2)}px,0) ` +
+                    `rotateX(${((1 - wordProgress) * -12).toFixed(2)}deg) ` +
+                    `scale(${(0.94 + wordProgress * 0.06 + wordBeat * 0.042).toFixed(4)})`,
                   transformOrigin: 'center bottom',
                 }}
               >
@@ -486,9 +515,12 @@ const VerticalScene = ({
         ) : null}
         <div
           style={{
+            filter: `brightness(${(1 + narrationBeat.strength * 0.045).toFixed(3)})`,
             marginTop: layout === 'source' ? 28 : 40,
             opacity: visualProgress,
-            transform: `translateY(${(1 - visualProgress) * 34}px) scale(${0.985 + visualProgress * 0.015})`,
+            transform:
+              `translateY(${(1 - visualProgress) * 34}px) ` +
+              `scale(${(0.985 + visualProgress * 0.015 + narrationBeat.strength * 0.01).toFixed(4)})`,
           }}
         >
           <VerticalSceneVisual
@@ -496,6 +528,7 @@ const VerticalScene = ({
             theme={theme}
             hasSourceAsset={hasSourceAsset}
             durationInFrames={durationInFrames}
+            narrationBeat={narrationBeat}
           />
         </div>
       </div>
@@ -619,6 +652,8 @@ export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Cha
               theme={theme}
               durationInFrames={editWindow.durationInFrames}
               hasSourceAsset={hasSourceAsset}
+              absoluteFrom={editWindow.from}
+              captions={pkg.captions.cues}
             />
           </Sequence>
         );
