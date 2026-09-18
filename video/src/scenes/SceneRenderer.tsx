@@ -8,7 +8,12 @@ import {SourceBadge} from '../components/SourceBadge';
 import {Stat} from '../components/Stat';
 import {Timeline} from '../components/Timeline';
 import {layoutForScene, staggerProgress} from '../polish';
-import {cinematicCameraStyle, headlineWordProgress, PremiumVfxBackdrop} from '../vfx';
+import {
+  cinematicCameraStyle,
+  editorialItemStyle,
+  headlineWordProgress,
+  PremiumVfxBackdrop,
+} from '../vfx';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
 type Theme = Record<string, unknown>;
@@ -403,12 +408,20 @@ export const QuoteScene: SceneComponent = (props) => {
 
 export const ListScene: SceneComponent = (props) => {
   const {scene, theme} = props;
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
   const items = stringList(scene.data, 'items');
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
   return (
     <SceneShell {...props} eyebrow="KEY POINTS">
       <div style={{display: 'grid', gap: 18}}>
         {(items.length ? items : scene.emphasis).slice(0, 6).map((item, index) => (
-          <Panel key={`${item}-${index}`} theme={theme}><span style={{color: accent(theme), fontWeight: 850, marginRight: 18}}>{String(index + 1).padStart(2, '0')}</span><span style={{fontSize: 28, fontWeight: 650}}>{item}</span></Panel>
+          <div key={`${item}-${index}`} style={editorialItemStyle(frame, fps, index, family)}>
+            <Panel theme={theme}>
+              <span style={{color: accent(theme), fontWeight: 900, marginRight: 18}}>{String(index + 1).padStart(2, '0')}</span>
+              <span style={{fontSize: 28, fontWeight: 700}}>{item}</span>
+            </Panel>
+          </div>
         ))}
       </div>
     </SceneShell>
@@ -417,12 +430,32 @@ export const ListScene: SceneComponent = (props) => {
 
 export const ProcessScene: SceneComponent = (props) => {
   const {scene, theme} = props;
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
   const steps = stringList(scene.data, 'steps');
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
   return (
     <SceneShell {...props} eyebrow="HOW IT WORKS">
       <div style={{display: 'flex', gap: 18}}>
         {(steps.length ? steps : ['Input', 'Process', 'Output']).slice(0, 5).map((step, index) => (
-          <div key={`${step}-${index}`} style={{background: index === 0 ? accent(theme) : 'rgba(255,255,255,.07)', borderRadius: 24, color: index === 0 ? '#06110D' : 'inherit', flex: 1, fontSize: 24, fontWeight: 760, padding: '34px 24px', textAlign: 'center'}}>{step}</div>
+          <div
+            key={`${step}-${index}`}
+            style={{
+              ...editorialItemStyle(frame, fps, index, family),
+              background: index === 0 ? accent(theme) : 'rgba(255,255,255,.07)',
+              border: `1px solid ${index === 0 ? accent(theme) : themeColor(theme, 'border', 'rgba(255,255,255,.14)')}`,
+              borderRadius: 24,
+              boxShadow: index === 0 ? `0 20px 54px ${accent(theme)}22` : '0 18px 48px rgba(0,0,0,.18)',
+              color: index === 0 ? '#06110D' : 'inherit',
+              flex: 1,
+              fontSize: 24,
+              fontWeight: 800,
+              padding: '34px 24px',
+              textAlign: 'center',
+            }}
+          >
+            {step}
+          </div>
         ))}
       </div>
     </SceneShell>
@@ -461,16 +494,21 @@ export const MapScene: SceneComponent = (props) => {
 
 export const SocialContextScene: SceneComponent = (props) => {
   const {scene, theme} = props;
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
   const posts = recordList(scene.data, 'posts');
   const cards = posts.length ? posts : [{author: 'Community', text: supportingText(scene)}];
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
   return (
     <SceneShell {...props} eyebrow="SOCIAL SIGNAL">
       <div style={{display: 'grid', gap: 20, gridTemplateColumns: cards.length > 1 ? '1fr 1fr' : '1fr'}}>
         {cards.slice(0, 4).map((post, index) => (
-          <Panel key={index} theme={theme}>
-            <div style={{color: accent(theme), fontSize: 20, fontWeight: 800}}>{typeof post.author === 'string' ? post.author : 'Community'}</div>
-            <div style={{fontSize: 27, lineHeight: 1.4, marginTop: 14}}>{typeof post.text === 'string' ? post.text : 'Conversation is accelerating.'}</div>
-          </Panel>
+          <div key={index} style={editorialItemStyle(frame, fps, index, family)}>
+            <Panel theme={theme}>
+              <div style={{color: accent(theme), fontSize: 20, fontWeight: 900}}>{typeof post.author === 'string' ? post.author : 'Community'}</div>
+              <div style={{fontSize: 27, fontWeight: 620, lineHeight: 1.4, marginTop: 14}}>{typeof post.text === 'string' ? post.text : 'Conversation is accelerating.'}</div>
+            </Panel>
+          </div>
         ))}
       </div>
     </SceneShell>
