@@ -204,7 +204,9 @@ export const SourceBrowserScene: SceneComponent = (props) => {
   const {scene, theme, assets} = props;
   const url = stringValue(scene.data, 'url', stringValue(scene.data, 'source_url', 'source.local'));
   const body = stringValue(scene.data, 'body', supportingText(scene));
-  const hasCapturedVisual = scene.asset_ids.some((id) => assets.some((asset) => asset.id === id));
+  const hasCapturedVisual =
+    scene.asset_ids.some((id) => assets.some((asset) => asset.id === id)) ||
+    assets.some((asset) => asset.scene_id === scene.id);
   return (
     <SceneShell {...props} eyebrow="SOURCE">
       {hasCapturedVisual ? (
