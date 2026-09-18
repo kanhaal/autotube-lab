@@ -246,3 +246,33 @@ def test_media_health_does_not_load_gpu_models(monkeypatch):
     assert result["kokoro"] is True
     assert result["faster_whisper"] is True
     assert result["ffmpeg"] is True
+
+
+def test_caption_alignment_keeps_kinetic_caption_phrases_compact(tmp_path):
+    from app.captions.align import align_narration
+
+    words = [
+        SimpleNamespace(start=index * 0.25, end=(index + 1) * 0.25, word=word)
+        for index, word in enumerate(
+            "This source card now moves like a premium editorial sequence with clean timing.".split()
+        )
+    ]
+    segments = [
+        SimpleNamespace(
+            words=words,
+            text="This source card now moves like a premium editorial sequence with clean timing.",
+        )
+    ]
+
+    class FakeTranscriber:
+        def transcribe(self, path, word_timestamps=False):
+            return iter(segments), None
+
+    cues = align_narration(
+        tmp_path / "audio.wav",
+        "This source card now moves like a premium editorial sequence with clean timing.",
+        FakeTranscriber(),
+    )
+
+    assert cues
+    assert max(len(cue.words) for cue in cues) <= 5
