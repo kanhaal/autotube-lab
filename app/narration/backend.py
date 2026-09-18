@@ -18,7 +18,7 @@ class ConfiguredTTS:
         voice_profile: str,
         *,
         segmented: bool = True,
-        max_chars: int = 900,
+        max_chars: int = 280,
     ):
         self.backend = backend
         self.voice_profile = voice_profile
