@@ -64,4 +64,54 @@ def test_scene_schema_normalizes_list_fields_to_tuples():
     assert scene.source_ids == ("source_1",)
     assert scene.asset_ids == ()
     assert scene.emphasis == ("local",)
+    assert scene.effects == ()
+    assert scene.transition_out is None
     assert plan.schema_version == "1"
+
+
+def test_scene_schema_accepts_additive_effects_and_transition_out():
+    payload = base_payload()
+    payload["scenes"][0]["effects"] = [
+        {
+            "kind": "auto_zoom",
+            "target": {"x": 0.18, "y": 0.12, "width": 0.48, "height": 0.36},
+            "scale": 1.22,
+        },
+        {
+            "kind": "ticker_overlay",
+            "text": "Patch notes spotted",
+            "badge": "UNCONFIRMED",
+        },
+    ]
+    payload["scenes"][0]["transition_out"] = "whoosh_zoom"
+
+    scene = parse_scene_plan(payload).scenes[0]
+
+    assert scene.effects[0]["kind"] == "auto_zoom"
+    assert scene.effects[0]["scale"] == 1.22
+    assert scene.effects[1]["badge"] == "UNCONFIRMED"
+    assert scene.transition_out == "whoosh_zoom"
+
+
+def test_scene_schema_rejects_unknown_effect_kind():
+    payload = base_payload()
+    payload["scenes"][0]["effects"] = [{"kind": "magic_ai_fx"}]
+
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "effect kind" in str(exc)
+        return
+    raise AssertionError("expected ValueError")
+
+
+def test_scene_schema_rejects_unknown_transition_out():
+    payload = base_payload()
+    payload["scenes"][0]["transition_out"] = "star_wipe"
+
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "transition_out" in str(exc)
+        return
+    raise AssertionError("expected ValueError")
