@@ -151,3 +151,80 @@ def test_deep_media_smoke_loads_and_releases_caption_model(monkeypatch):
     assert report["faster_whisper"]["ok"] is True
     assert report["faster_whisper"]["detail"] == "loaded"
     assert report["tiny_render"]["ok"] is True
+
+
+def test_legacy_professional_renderer_releases_heavy_resources_between_stages(
+    monkeypatch, tmp_path
+):
+    from app.assets.models import AssetManifest
+    from app.captions.models import CaptionCue
+    from app.planning.scene_schema import ScenePlan, SceneSpec
+    from app.rendering.pipeline import render_professional_episode
+
+    events: list[str] = []
+
+    class TTS:
+        def synthesize(self, text, out):
+            events.append(f"tts:{text}")
+            Path(out).write_bytes(b"voice")
+            return Path(out)
+
+        def release(self):
+            events.append("tts:release")
+
+    class Transcriber:
+        def release(self):
+            events.append("whisper:release")
+
+    class Runner:
+        def render(self, package_dir, composition, out):
+            Path(out).write_bytes(b"video")
+            return Path(out)
+
+    def align(audio, script, transcriber):
+        events.append(f"whisper:{script}")
+        return (CaptionCue(0.0, 1.0, script, tuple(script.split())),)
+
+    def package(*args, **kwargs):
+        path = Path(args[7])
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def thumbnails(*args, **kwargs):
+        out = Path(args[4]) / "thumb.png"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(b"png")
+        return (out,)
+
+    def fake_master(narration, cfg, out):
+        Path(out).write_bytes(b"master")
+        return Path(out)
+
+    monkeypatch.setattr("app.rendering.pipeline._master_audio", fake_master)
+
+    plan = ScenePlan(
+        "kernelrush",
+        "longform",
+        (SceneSpec("s1", "Long narration.", "hook", "headline"),),
+    )
+
+    render_professional_episode(
+        channel_cfg={"id": "kernelrush", "name": "KernelRush", "brand": {}},
+        title="Title",
+        script="Long narration.",
+        scene_plan=plan,
+        packet={"sources": []},
+        asset_manifest=AssetManifest(records=()),
+        tts=TTS(),
+        out_dir=tmp_path,
+        llm=object(),
+        runner=Runner(),
+        transcriber=Transcriber(),
+        caption_aligner=align,
+        package_builder=package,
+        thumbnail_renderer=thumbnails,
+        short_builder=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("skip short")),
+    )
+
+    assert events.index("tts:release") < events.index("whisper:Long narration.")
+    assert "whisper:release" in events
