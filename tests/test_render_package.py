@@ -130,3 +130,64 @@ def test_build_render_package_rejects_source_paths_that_escape_declared_root(tmp
             format="long",
             asset_root=tmp_path / "allowed-assets",
         )
+
+
+def _write_test_wav(path: Path, seconds: float = 1.25) -> Path:
+    import wave
+
+    sample_rate = 16000
+    frames = int(sample_rate * seconds)
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(b"\x00\x00" * frames)
+    return path
+
+
+def test_build_render_package_rejects_unreadable_audio_before_remotion(tmp_path: Path):
+    audio = tmp_path / "broken.wav"
+    audio.write_bytes(b"not a wav file")
+    plan = ScenePlan(
+        channel_id="kernelrush",
+        format="longform",
+        scenes=(SceneSpec("scene-1", "text", "hook", "headline"),),
+    )
+
+    with pytest.raises(ValueError, match="audio"):
+        build_render_package(
+            {"id": "kernelrush", "name": "KernelRush", "brand": {}},
+            "Title",
+            "text",
+            plan,
+            (),
+            AssetManifest(records=()),
+            audio,
+            tmp_path / "package",
+            format="long",
+        )
+
+
+def test_build_render_package_records_real_audio_duration(tmp_path: Path):
+    audio = _write_test_wav(tmp_path / "audio.wav", 1.25)
+    plan = ScenePlan(
+        channel_id="kernelrush",
+        format="longform",
+        scenes=(SceneSpec("scene-1", "text", "hook", "headline"),),
+    )
+
+    package = build_render_package(
+        {"id": "kernelrush", "name": "KernelRush", "brand": {}},
+        "Title",
+        "text",
+        plan,
+        (),
+        AssetManifest(records=()),
+        audio,
+        tmp_path / "package",
+        format="long",
+    )
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+
+    assert manifest["duration_source"] == "audio"
+    assert manifest["duration_seconds"] == pytest.approx(1.25, abs=0.02)
