@@ -68,6 +68,12 @@ export type RenderEffectsProfileV1 = {
   intro_sting?: boolean;
   lower_third?: boolean;
   texture?: string;
+  v4_editor?: boolean;
+  gpu_depth?: boolean;
+  camera_intensity?: number;
+  microbeat_strength?: number;
+  source_first?: boolean;
+  caption_mode?: 'editorial' | 'legacy';
 };
 
 export type RenderManifestV1 = {
