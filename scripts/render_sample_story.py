@@ -12,11 +12,13 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.assets.models import AssetManifest, AssetRecord
 from app.audio.mix import SfxEvent, mix_episode_audio
+from app.audio.sound_design import build_sound_design_events
 from app.captions.align import FasterWhisperTranscriber, align_narration
 from app.config import channel_config
 from app.narration.backend import ConfiguredTTS, select_tts_backend
 from app.narration.fallback import FallbackTTS
 from app.planning.scene_schema import parse_scene_plan
+from app.rendering.ffmpeg import probe_media
 from app.rendering.history import create_render_run
 from app.rendering.package import build_render_package
 from app.rendering.pipeline import composition_id
@@ -256,10 +258,17 @@ def render_story(fixture: Path, output_root: Path) -> dict:
 
     for format_name in ("long", "short"):
         item = prepared[format_name]
+        duration = probe_media(item["narration"]).format_duration
+        editorial_events = build_sound_design_events(
+            item["plan"],
+            duration_seconds=duration,
+            out_dir=target / "sound-design",
+            channel_id=channel_id,
+        )
         master = mix_episode_audio(
             item["narration"],
             music,
-            events,
+            tuple(events) + tuple(editorial_events),
             target / f"{format_name}-master.wav",
         )
         package = build_render_package(
