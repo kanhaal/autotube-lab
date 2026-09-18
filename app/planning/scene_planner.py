@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from app.planning.scene_schema import (
+    AUDIO_CUE_KINDS,
+    CAMERA_PRESETS,
     EFFECT_KINDS,
+    MICRO_BEAT_KINDS,
     MOTIONS,
     SCENE_TYPES,
+    SHOT_STYLES,
     TRANSITIONS,
     TRANSITION_OUTS,
     ScenePlan,
@@ -12,7 +16,7 @@ from app.planning.scene_schema import (
 
 REPAIR_PROMPT = (
     "Return one valid JSON object matching the requested scene-plan schema. "
-    "Use only the registered scene types, motions, transitions, effects, and transition_out values."
+    "Use only registered scene, shot, camera, motion, transition, effect, micro-beat, and audio values."
 )
 
 COMMON = """You are the visual director for a factual faceless YouTube explainer.
@@ -21,18 +25,37 @@ quotes, products, interfaces, or source claims. Prefer source/browser/product ca
 charts, comparisons, timelines, counters, diagrams, and typography over generic imagery.
 Return JSON with channel_id, format='longform', and scenes. Each scene must contain id, narration,
 purpose, scene_type, headline, subheadline, source_ids, asset_ids, motion, emphasis, transition,
-fallback_scene_type, and data. It MAY also contain an effects array and transition_out.
+fallback_scene_type, and data. V4 scenes MAY also include shot_style, camera, micro_beats,
+audio_cues, effects, and transition_out.
+
+Edit like a professional YouTube editor, not a presentation designer:
+- Alternate visual grammar. Do not repeat the same headline-plus-card layout in consecutive scenes.
+- Prefer full-bleed verified source media, detail crops, kinetic text beats, split screens, data-full
+  shots, and 3D graphic stages. Use editorial card layouts only when they are the clearest choice.
+- Keep a meaningful visual event roughly every 0.8-1.8 seconds via camera movement, crop shifts,
+  callouts, text emphasis, source inserts, or micro-beats.
+- Camera moves must have editorial intent: target a detail, reveal context, create emphasis, or
+  maintain motion continuity into the next cut. Avoid constant random drifting.
+- Use transition_out selectively. Match cuts should preserve a shape/position; smash cuts are rare;
+  cross dissolves are for softer time/context changes; whip pans are for energetic motion continuity.
+- Add restrained audio_cues on meaningful edits: whoosh for motion, impact/braam for reveals,
+  click/ding for UI/stat moments, glitch/static for LobbySignal digital breaks, and riser before a
+  reveal. Do not put a sound on every cut.
 Effects are optional and must be used selectively. For stat_count_up, final_value must equal the
 verified number from research and verified_value must store that same verified number. Never invent
 a verified_value. Keep meme_flash requested duration between 0.5 and 1.5 seconds."""
 
-KERNELRUSH = """KernelRush direction: premium technology/editorial atmosphere with restrained
-motion, clean hierarchy, generous spacing, and smooth transitions. Plan approximately 15-25
-semantic scenes for a normal 4-7 minute episode. Use faster cuts only in the opening hook."""
+KERNELRUSH = """KernelRush V4 direction: premium technology documentary/editorial pacing.
+Favor full-screen source interfaces, purposeful dolly/orbit/rack-focus camera work, depth-separated
+UI, subtle 3D stages, clean match cuts, and quiet moments between denser information. The brand is
+precise rather than flashy. Use whoosh/impact/click sound design sparingly. Plan approximately
+15-25 semantic scenes, but create micro-beats inside scenes so a scene may contain multiple edits."""
 
-LOBBYSIGNAL = """LobbySignal direction: faster gaming and internet-culture editorial pacing with
-kinetic typography, punchier emphasis, game/store/context cards, timelines, and counters. Plan
-approximately 20-35 semantic scenes for a normal 4-7 minute episode without becoming chaotic."""
+LOBBYSIGNAL = """LobbySignal V4 direction: fast gaming/internet-culture editing with full-bleed
+gameplay/source media, aggressive but controlled crop changes, whip/match/smash cuts, kinetic type,
+split-screen comparisons, freeze-frame callouts, glitch accents, 3D graphic moments, and stronger
+impact/glitch/riser sound design. Keep it legible and intentional rather than chaotic. Plan
+approximately 20-35 semantic scenes and use micro-beats for sub-second-to-two-second visual changes."""
 
 
 def _prompt(channel_id: str) -> str:
@@ -47,7 +70,11 @@ def _prompt(channel_id: str) -> str:
         f"\nRegistered scene types: {sorted(SCENE_TYPES)}"
         f"\nRegistered motions: {sorted(MOTIONS)}"
         f"\nRegistered transitions: {sorted(TRANSITIONS)}"
+        f"\nRegistered shot styles: {sorted(SHOT_STYLES)}"
+        f"\nRegistered camera presets: {sorted(CAMERA_PRESETS)}"
         f"\nRegistered effects: {sorted(EFFECT_KINDS)}"
+        f"\nRegistered micro-beats: {sorted(MICRO_BEAT_KINDS)}"
+        f"\nRegistered audio cues: {sorted(AUDIO_CUE_KINDS)}"
         f"\nRegistered transition_out values: {sorted(TRANSITION_OUTS)}"
     )
     return COMMON + "\n\n" + channel + vocabulary
