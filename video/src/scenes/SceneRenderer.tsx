@@ -12,6 +12,7 @@ import {
   cinematicCameraStyle,
   editorialFocusWeight,
   editorialItemStyle,
+  editorialLineProgress,
   headlineWordProgress,
   PremiumVfxBackdrop,
 } from '../vfx';
@@ -297,13 +298,47 @@ export const SourceBrowserScene: SceneComponent = (props) => {
 
 export const DeviceScene: SceneComponent = (props) => {
   const {scene, theme} = props;
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
+  const motion = editorialItemStyle(frame, fps, 0, family);
+  const sweep = ((frame * (family === 'snap' ? 8 : 5)) % 720) - 220;
+  const tilt = Math.sin(frame / Math.max(1, fps) * (family === 'snap' ? 1.1 : 0.62)) * (family === 'snap' ? 1.2 : 0.55);
   return (
     <SceneShell {...props} eyebrow="PRODUCT">
-      <div style={{display: 'flex', justifyContent: 'center'}}>
-        <div style={{background: '#0E121A', border: '10px solid #252B36', borderRadius: 58, boxShadow: '0 35px 90px rgba(0,0,0,.4)', height: 470, padding: 28, width: 260}}>
-          <div style={{background: accent(theme), borderRadius: 999, height: 8, margin: '0 auto 30px', opacity: 0.7, width: 72}} />
-          <div style={{fontSize: 30, fontWeight: 800}}>{stringValue(scene.data, 'device_name', scene.headline || 'Device')}</div>
-          <div style={{fontSize: 20, lineHeight: 1.45, marginTop: 18, opacity: 0.65}}>{stringValue(scene.data, 'feature', supportingText(scene))}</div>
+      <div style={{display: 'flex', justifyContent: 'center', perspective: 1600}}>
+        <div
+          style={{
+            ...motion,
+            background: 'linear-gradient(155deg,#171D28,#080B11 70%)',
+            border: '8px solid #252B36',
+            borderRadius: 58,
+            boxShadow: `0 48px 120px rgba(0,0,0,.46), 0 0 0 1px ${accent(theme)}18`,
+            height: 500,
+            overflow: 'hidden',
+            padding: 30,
+            position: 'relative',
+            transform: `${String(motion.transform ?? '')} rotateY(${tilt.toFixed(3)}deg) rotateX(${(tilt * -0.35).toFixed(3)}deg)`,
+            width: 300,
+          }}
+        >
+          <div style={{background: '#05070B', borderRadius: 999, height: 10, margin: '0 auto 28px', opacity: 0.9, width: 82}} />
+          <div style={{color: accent(theme), fontSize: 18, fontWeight: 900, letterSpacing: 2.4, textTransform: 'uppercase'}}>product signal</div>
+          <div style={{fontSize: 32, fontWeight: 850, lineHeight: 1.08, marginTop: 18}}>{stringValue(scene.data, 'device_name', scene.headline || 'Device')}</div>
+          <div style={{fontSize: 21, lineHeight: 1.45, marginTop: 20, opacity: 0.66}}>{stringValue(scene.data, 'feature', supportingText(scene))}</div>
+          <div
+            style={{
+              background: `linear-gradient(90deg, transparent, rgba(255,255,255,.20), ${accent(theme)}33, transparent)`,
+              bottom: -80,
+              filter: 'blur(2px)',
+              position: 'absolute',
+              right: -120,
+              top: -80,
+              transform: `translateX(${sweep}px) skewX(-18deg)`,
+              width: 110,
+            }}
+          />
+          <div style={{border: `1px solid ${accent(theme)}22`, borderRadius: 42, bottom: 18, left: 18, pointerEvents: 'none', position: 'absolute', right: 18, top: 18}} />
         </div>
       </div>
     </SceneShell>
@@ -429,11 +464,65 @@ export const ComparisonScene: SceneComponent = (props) => {
 
 export const QuoteScene: SceneComponent = (props) => {
   const {scene, theme} = props;
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
   const quote = stringValue(scene.data, 'quote', scene.narration || scene.headline);
+  const words = quote.trim().split(/\s+/).filter(Boolean);
+  const attributionProgress = editorialLineProgress(frame, fps, Math.ceil(words.length / 5) + 1, family);
   return (
     <SceneShell {...props} eyebrow="QUOTE">
-      <div style={{borderLeft: `10px solid ${accent(theme)}`, fontSize: 48, fontWeight: 680, lineHeight: 1.25, maxWidth: 1320, padding: '12px 0 12px 38px'}}>“{quote}”</div>
-      <div style={{fontSize: 23, opacity: 0.55}}>{stringValue(scene.data, 'attribution', scene.source_ids[0] || '')}</div>
+      <div style={{maxWidth: 1320, padding: '10px 0 10px 44px', position: 'relative'}}>
+        <div
+          style={{
+            color: accent(theme),
+            fontSize: 104,
+            fontWeight: 900,
+            left: -18,
+            lineHeight: 0.7,
+            opacity: editorialLineProgress(frame, fps, 0, family) * 0.82,
+            position: 'absolute',
+            top: -18,
+            transform: `scale(${(0.82 + editorialLineProgress(frame, fps, 0, family) * 0.18).toFixed(3)})`,
+          }}
+        >
+          “
+        </div>
+        <div style={{fontSize: 48, fontWeight: 700, lineHeight: 1.24}}>
+          {words.map((word, index) => {
+            const group = Math.floor(index / 5);
+            const progress = editorialLineProgress(frame, fps, group, family);
+            return (
+              <span
+                key={`${word}-${index}`}
+                style={{
+                  display: 'inline-block',
+                  filter: `blur(${((1 - progress) * 5).toFixed(2)}px)`,
+                  marginRight: 12,
+                  opacity: progress,
+                  transform: `translate3d(0,${((1 - progress) * 18).toFixed(2)}px,0)`,
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            background: `linear-gradient(90deg, ${accent(theme)}, transparent)`,
+            height: 3,
+            marginTop: 26,
+            opacity: attributionProgress,
+            transform: `scaleX(${attributionProgress.toFixed(4)})`,
+            transformOrigin: 'left',
+            width: 260,
+          }}
+        />
+      </div>
+      <div style={{fontSize: 23, opacity: attributionProgress * 0.62, transform: `translateX(${(1 - attributionProgress) * 20}px)`}}>
+        {stringValue(scene.data, 'attribution', scene.source_ids[0] || '')}
+      </div>
     </SceneShell>
   );
 };
@@ -519,29 +608,107 @@ export const ProcessScene: SceneComponent = (props) => {
 
 export const CodeScene: SceneComponent = (props) => {
   const {scene, theme} = props;
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
   const code = stringValue(scene.data, 'code', stringValue(scene.data, 'snippet', '// code example'));
+  const lines = code.split(/\r?\n/).slice(0, 10);
+  const progressByLine = lines.map((_, index) => editorialLineProgress(frame, fps, index, family));
+  const activeLine = Math.max(0, progressByLine.reduce((latest, progress, index) => (progress > 0.18 ? index : latest), 0));
   return (
     <SceneShell {...props} eyebrow="CODE">
-      <pre style={{background: '#0B0F17', border: '1px solid rgba(255,255,255,.12)', borderRadius: 28, color: '#DDE7F2', fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontSize: 25, lineHeight: 1.5, margin: 0, overflow: 'hidden', padding: 34, whiteSpace: 'pre-wrap'}}>
-        <span style={{color: accent(theme)}}>{stringValue(scene.data, 'language', 'code')}</span>{'\n\n'}{code}
-      </pre>
+      <div
+        style={{
+          background: '#0B0F17',
+          border: '1px solid rgba(255,255,255,.12)',
+          borderRadius: 28,
+          boxShadow: '0 30px 90px rgba(0,0,0,.34)',
+          color: '#DDE7F2',
+          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+          fontSize: 24,
+          lineHeight: 1.5,
+          overflow: 'hidden',
+          padding: '26px 0 28px',
+        }}
+      >
+        <div style={{alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,.08)', display: 'flex', gap: 9, padding: '0 30px 20px'}}>
+          <span style={{background: '#FF6B6B', borderRadius: 99, height: 10, width: 10}} />
+          <span style={{background: '#FFD166', borderRadius: 99, height: 10, width: 10}} />
+          <span style={{background: accent(theme), borderRadius: 99, height: 10, width: 10}} />
+          <span style={{color: accent(theme), fontSize: 16, fontWeight: 800, letterSpacing: 1.8, marginLeft: 12, textTransform: 'uppercase'}}>
+            {stringValue(scene.data, 'language', 'code')}
+          </span>
+        </div>
+        <div style={{paddingTop: 18}}>
+          {lines.map((line, index) => {
+            const progress = progressByLine[index];
+            const active = index === activeLine;
+            return (
+              <div
+                key={`${line}-${index}`}
+                style={{
+                  background: active ? `linear-gradient(90deg, ${accent(theme)}16, transparent 72%)` : 'transparent',
+                  borderLeft: `3px solid ${active ? accent(theme) : 'transparent'}`,
+                  display: 'grid',
+                  gridTemplateColumns: '52px 1fr',
+                  opacity: 0.18 + progress * 0.82,
+                  padding: '3px 30px 3px 20px',
+                  transform: `translate3d(${((1 - progress) * 22).toFixed(2)}px,0,0)`,
+                }}
+              >
+                <span style={{color: active ? accent(theme) : '#647084', opacity: 0.7, textAlign: 'right'}}>{String(index + 1).padStart(2, '0')}</span>
+                <span style={{paddingLeft: 20, whiteSpace: 'pre-wrap'}}>{line || ' '}{active && frame % Math.max(2, Math.round(fps * 0.7)) < Math.round(fps * 0.35) ? <span style={{color: accent(theme)}}>▋</span> : null}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </SceneShell>
   );
 };
 
 export const MapScene: SceneComponent = (props) => {
   const {scene, theme} = props;
-  const markers = stringList(scene.data, 'markers');
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
+  const markers = (stringList(scene.data, 'markers').length ? stringList(scene.data, 'markers') : ['Primary location']).slice(0, 5);
+  const positions = markers.map((_, index) => ({
+    x: 18 + (index * 17) % 70,
+    y: 22 + (index * 23) % 56,
+  }));
+  const routeProgress = staggerProgress(frame, fps, 1);
+  const routePoints = positions.map((point) => `${point.x},${point.y}`).join(' ');
   return (
     <SceneShell {...props} eyebrow="WHERE">
       <div style={{background: 'linear-gradient(135deg,#0D1421,#121A2B)', borderRadius: 30, minHeight: 360, overflow: 'hidden', position: 'relative'}}>
-        <div style={{backgroundImage: 'linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)', backgroundSize: '52px 52px', inset: 0, position: 'absolute'}} />
-        {(markers.length ? markers : ['Primary location']).slice(0, 5).map((marker, index) => (
-          <div key={marker} style={{left: `${18 + (index * 17) % 70}%`, position: 'absolute', top: `${22 + (index * 23) % 56}%`}}>
-            <div style={{background: accent(theme), borderRadius: 99, boxShadow: `0 0 30px ${accent(theme)}`, height: 18, width: 18}} />
-            <div style={{fontSize: 19, fontWeight: 700, marginTop: 8, whiteSpace: 'nowrap'}}>{marker}</div>
-          </div>
-        ))}
+        <div style={{backgroundImage: 'linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)', backgroundSize: '52px 52px', inset: 0, position: 'absolute', transform: `translate3d(${(frame % 52) * 0.08}px,${(frame % 52) * 0.05}px,0)`}} />
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{height: '100%', inset: 0, overflow: 'visible', position: 'absolute', width: '100%'}}>
+          <polyline
+            fill="none"
+            points={routePoints}
+            stroke={accent(theme)}
+            strokeDasharray="220"
+            strokeDashoffset={220 * (1 - routeProgress)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeOpacity={0.54}
+            strokeWidth="0.6"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {markers.map((marker, index) => {
+          const motion = editorialItemStyle(frame, fps, index + 1, family);
+          const pulse = 0.8 + Math.sin(frame / Math.max(1, fps) * Math.PI * 2 + index) * 0.18;
+          return (
+            <div key={marker} style={{...motion, left: `${positions[index].x}%`, position: 'absolute', top: `${positions[index].y}%`}}>
+              <div style={{background: accent(theme), borderRadius: 99, boxShadow: `0 0 ${Math.round(24 + pulse * 12)}px ${accent(theme)}`, height: 18, position: 'relative', width: 18}}>
+                <div style={{border: `1px solid ${accent(theme)}88`, borderRadius: 99, inset: -8, opacity: 0.55, position: 'absolute', transform: `scale(${pulse.toFixed(3)})`}} />
+              </div>
+              <div style={{fontSize: 19, fontWeight: 700, marginTop: 8, textShadow: '0 3px 16px rgba(0,0,0,.65)', whiteSpace: 'nowrap'}}>{marker}</div>
+            </div>
+          );
+        })}
       </div>
     </SceneShell>
   );
