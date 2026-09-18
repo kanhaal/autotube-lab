@@ -18,7 +18,12 @@ def _normalize_text(text: str) -> str:
 
 
 def _similarity(expected: str, actual: str) -> float:
-    return SequenceMatcher(None, _normalize_text(expected), _normalize_text(actual)).ratio()
+    return SequenceMatcher(
+        None,
+        _normalize_text(expected),
+        _normalize_text(actual),
+        autojunk=False,
+    ).ratio()
 
 
 def _cuda_runtime_library_error(exc: RuntimeError) -> bool:
