@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 
 import {
   cinematicCameraStyle,
+  editorialFocusWeight,
   editorialItemStyle,
   headlineWordProgress,
   premiumVfxProfile,
@@ -44,6 +45,28 @@ describe('premium editorial VFX', () => {
     expect(String(first.transform)).toContain('translate3d(');
     expect(Number(later.opacity)).toBeGreaterThan(0);
     expect(String(later.transform)).toContain('scale(');
+  });
+
+  it('keeps editorial cards dimensional with channel-specific restrained perspective', () => {
+    const precision = editorialItemStyle(9, 30, 0, 'precision');
+    const snap = editorialItemStyle(9, 30, 0, 'snap');
+
+    expect(String(precision.transform)).toContain('perspective(');
+    expect(String(precision.transform)).toContain('rotateY(');
+    expect(String(snap.transform)).toContain('perspective(');
+    expect(snap.transform).not.toBe(precision.transform);
+  });
+
+  it('hands process attention forward instead of pinning focus to the first step', () => {
+    const firstEarly = editorialFocusWeight(18, 180, 0, 3);
+    const thirdEarly = editorialFocusWeight(18, 180, 2, 3);
+    const firstLate = editorialFocusWeight(150, 180, 0, 3);
+    const thirdLate = editorialFocusWeight(150, 180, 2, 3);
+
+    expect(firstEarly).toBeGreaterThan(thirdEarly);
+    expect(thirdLate).toBeGreaterThan(firstLate);
+    expect(firstEarly).toBeLessThanOrEqual(1);
+    expect(thirdLate).toBeLessThanOrEqual(1);
   });
 
   it('creates a multi-layer transition accent instead of a single flat fade', () => {
