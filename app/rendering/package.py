@@ -31,6 +31,15 @@ def _dimensions(format_name: str) -> tuple[int, int]:
     raise ValueError(f"unsupported render format: {format_name}")
 
 
+def _theme_payload(channel_cfg: dict) -> dict:
+    brand = channel_cfg.get("brand", {})
+    theme = dict(brand) if isinstance(brand, dict) else {}
+    effects = channel_cfg.get("effects", {})
+    if isinstance(effects, dict):
+        theme["effects"] = effects
+    return theme
+
+
 def build_render_package(
     channel_cfg: dict,
     title: str,
@@ -93,7 +102,7 @@ def build_render_package(
         "duration_source": "audio",
         "duration_seconds": audio_duration,
         "audio_path": audio_dest.relative_to(package_dir).as_posix(),
-        "theme": channel_cfg.get("brand", {}),
+        "theme": _theme_payload(channel_cfg),
     }
     script_payload = {"title": title, "script": script}
     scene_payload = {
