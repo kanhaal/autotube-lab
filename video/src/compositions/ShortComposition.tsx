@@ -8,6 +8,8 @@ import {
 } from 'remotion';
 
 import {Chart} from '../components/Chart';
+import {EffectStage} from '../effects/EffectStage';
+import {resolveChannelEffectProfile, type ChannelEffectProfile} from '../effects/channelEffects';
 import {Stat} from '../components/Stat';
 import {Timeline} from '../components/Timeline';
 import {
@@ -22,7 +24,7 @@ import {
   scenePresentationStyle,
   sceneSupportsVerifiedAsset,
 } from '../scenes/presentation';
-import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
+import type {AssetRecordV1, CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
 import {
   cinematicCameraStyle,
   editorialFocusWeight,
@@ -370,6 +372,10 @@ const VerticalScene = ({
   hasSourceAsset,
   absoluteFrom,
   captions,
+  assets,
+  profile,
+  channelName,
+  isFirstScene,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
@@ -377,6 +383,10 @@ const VerticalScene = ({
   hasSourceAsset: boolean;
   absoluteFrom: number;
   captions: CaptionCueV1[];
+  assets: AssetRecordV1[];
+  profile: ChannelEffectProfile;
+  channelName: string;
+  isFirstScene: boolean;
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -413,7 +423,7 @@ const VerticalScene = ({
   );
   const beatToken = narrationBeat.word.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  return (
+  const base = (
     <AbsoluteFill
       style={{
         background:
@@ -549,6 +559,21 @@ const VerticalScene = ({
       <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
     </AbsoluteFill>
   );
+  return (
+    <EffectStage
+      scene={scene}
+      theme={theme}
+      profile={profile}
+      assets={assets}
+      captions={captions}
+      absoluteFrom={absoluteFrom}
+      durationInFrames={durationInFrames}
+      isFirstScene={isFirstScene}
+      channelName={channelName}
+    >
+      {base}
+    </EffectStage>
+  );
 };
 
 const activeCaptionAt = (cues: CaptionCueV1[], seconds: number): CaptionCueV1 | undefined =>
@@ -629,6 +654,7 @@ const VerticalCaptionTrack = ({cues, theme}: {cues: CaptionCueV1[]; theme: Chann
 export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: ChannelTheme}) => {
   validateShortPackage(pkg);
   const windows = sceneFrameWindows(pkg);
+  const profile = resolveChannelEffectProfile(pkg);
 
   return (
     <AbsoluteFill style={{background: theme.background, fontFamily: 'Arial, Helvetica, sans-serif'}}>
@@ -654,6 +680,10 @@ export const ShortComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Cha
               hasSourceAsset={hasSourceAsset}
               absoluteFrom={editWindow.from}
               captions={pkg.captions.cues}
+              assets={pkg.assets.records}
+              profile={profile}
+              channelName={pkg.manifest.channel_name}
+              isFirstScene={index === 0}
             />
           </Sequence>
         );
