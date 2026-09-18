@@ -1,5 +1,6 @@
-import {AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 
+import {isVideoAsset, mediaPlaybackRateForScene} from '../effects/effectRegistry';
 import {overlappedSceneWindow} from '../polish';
 import {sourceMediaStyle} from '../vfx';
 import {
@@ -68,6 +69,7 @@ const SourceOverlay = ({visual, theme}: {visual: ActiveShortVisual; theme: Chann
     0,
     Math.min(1, visual.localFrame / Math.max(1, visual.durationInFrames - 1)),
   );
+  const mediaPlaybackRate = mediaPlaybackRateForScene(visual.scene, visual.localFrame, fps);
   return (
     <div
       style={{
@@ -86,16 +88,31 @@ const SourceOverlay = ({visual, theme}: {visual: ActiveShortVisual; theme: Chann
         transformOrigin: 'center center',
       }}
     >
-      <Img
-        src={staticFile(visual.asset.local_path)}
-        style={{
-          ...mediaStyle,
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'top center',
-          width: '100%',
-        }}
-      />
+      {isVideoAsset(visual.asset) ? (
+        <OffthreadVideo
+          src={staticFile(visual.asset.local_path)}
+          muted
+          playbackRate={mediaPlaybackRate}
+          style={{
+            ...mediaStyle,
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'top center',
+            width: '100%',
+          }}
+        />
+      ) : (
+        <Img
+          src={staticFile(visual.asset.local_path)}
+          style={{
+            ...mediaStyle,
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'top center',
+            width: '100%',
+          }}
+        />
+      )}
       <div
         style={{
           background: `linear-gradient(90deg, transparent, ${theme.accent}AA, rgba(255,255,255,.82), ${theme.secondary}99, transparent)`,
