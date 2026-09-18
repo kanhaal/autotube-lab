@@ -19,6 +19,18 @@ import {FreezeFrameEffect,freezeFrameWrap} from './FreezeFrameEffect';
 import {KineticWordReveal} from './KineticWordReveal';
 import {GlitchRgbSplitTransition} from './GlitchRgbSplitTransition';
 import {WhooshZoomTransition} from './WhooshZoomTransition';
+import {WhipPanTransition} from './WhipPanTransition';
+import {MatchCutTransition} from './MatchCutTransition';
+import {SmashCutTransition} from './SmashCutTransition';
+import {CrossDissolveTransition} from './CrossDissolveTransition';
+import {LiquidDisplacementTransition} from './LiquidDisplacementTransition';
+import {LightLeakEffect} from './LightLeakEffect';
+import {LensFlareEffect} from './LensFlareEffect';
+import {ParticleBurstEffect} from './ParticleBurstEffect';
+import {IconMorphEffect} from './IconMorphEffect';
+import {SplitScreenMultiAngleEffect} from './SplitScreenMultiAngleEffect';
+import {RuleOfThirdsReframeEffect,ruleOfThirdsReframeTransform} from './RuleOfThirdsReframeEffect';
+import {KenBurnsEffect,kenBurnsTransform} from './KenBurnsEffect';
 import {
   CalloutLeaderLine,CardFlip,ChromaticPulse,DuotoneFlash,FilmGrain,GridReveal,
   KineticInfographic,ProgressReveal,ScanlineFlicker,TagPop,UnderlineSweep,VignettePulse,
@@ -32,6 +44,8 @@ export const EFFECT_KINDS:readonly EffectKind[]=[
   'kinetic_word_reveal','kinetic_infographic','progress_reveal','tag_pop','parallax_layers','grid_reveal',
   'card_flip','underline_sweep','callout_leader_line','waveform_overlay','chromatic_pulse','film_grain',
   'vignette_pulse','rack_focus','screen_shake','scanline_flicker','duotone_flash',
+  'light_leak','lens_flare','particle_burst','icon_morph','split_screen_multi_angle',
+  'rule_of_thirds_reframe','ken_burns',
 ];
 
 export const effectRegistry:Record<EffectKind,EffectDefinition>={
@@ -65,11 +79,23 @@ export const effectRegistry:Record<EffectKind,EffectDefinition>={
   screen_shake:{transform:screenShakeTransform},
   scanline_flicker:{component:ScanlineFlicker},
   duotone_flash:{component:DuotoneFlash},
+  light_leak:{component:LightLeakEffect},
+  lens_flare:{component:LensFlareEffect},
+  particle_burst:{component:ParticleBurstEffect},
+  icon_morph:{component:IconMorphEffect},
+  split_screen_multi_angle:{component:SplitScreenMultiAngleEffect},
+  rule_of_thirds_reframe:{component:RuleOfThirdsReframeEffect,transform:ruleOfThirdsReframeTransform},
+  ken_burns:{component:KenBurnsEffect,transform:kenBurnsTransform},
 };
 
 export const transitionRegistry:Record<TransitionOutKind,React.ComponentType<EffectRenderProps>>={
   glitch_rgb_split:GlitchRgbSplitTransition,
   whoosh_zoom:WhooshZoomTransition,
+  whip_pan:WhipPanTransition,
+  match_cut:MatchCutTransition,
+  smash_cut:SmashCutTransition,
+  cross_dissolve:CrossDissolveTransition,
+  liquid_displacement:LiquidDisplacementTransition,
 };
 
 const mergeStyles=(styles:CSSProperties[]):CSSProperties=>{
