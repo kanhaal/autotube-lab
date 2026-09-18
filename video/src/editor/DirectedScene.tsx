@@ -3,7 +3,7 @@ import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 
 import {SourceBadge} from '../components/SourceBadge';
 import {SceneRenderer} from '../scenes/SceneRenderer';
-import type {AssetRecordV1, CameraPreset, CaptionCueV1, SceneSpecV1, ShotStyle} from '../types';
+import type {AssetRecordV1, CameraPreset, CaptionCueV1, RenderEffectsProfileV1, SceneSpecV1, ShotStyle} from '../types';
 import {headlineWordProgress, narrationEmphasisBeat} from '../vfx';
 import type {ChannelTheme} from '../themes/types';
 import {cameraRigStyle, microBeatEnvelope} from './camera';
@@ -19,9 +19,32 @@ type DirectedSceneProps = {
   durationInFrames: number;
   absoluteFrom: number;
   format: 'long' | 'short';
+  profile?: RenderEffectsProfileV1;
 };
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+const DepthBackground = ({
+  theme,
+  profile,
+  opacity = 1,
+}: {
+  theme: ChannelTheme;
+  profile?: RenderEffectsProfileV1;
+  opacity?: number;
+}) =>
+  profile?.gpu_depth === false ? (
+    <AbsoluteFill
+      style={{
+        background:
+          `radial-gradient(circle at 72% 20%, ${theme.secondary}22, transparent 34%), ` +
+          `radial-gradient(circle at 18% 82%, ${theme.accent}16, transparent 38%), ${theme.background}`,
+        opacity,
+      }}
+    />
+  ) : (
+    <GpuDepthStage theme={theme} opacity={opacity} />
+  );
 
 const defaultCameraFor = (style: ShotStyle, theme: ChannelTheme): CameraPreset => {
   const energetic = theme.transitionFamily === 'snap';
@@ -207,7 +230,7 @@ const SourceDetailShot = (props: DirectedSceneProps) => {
   if (!asset) return <KineticHeadline scene={scene} theme={theme} format={format} />;
   return (
     <AbsoluteFill style={{background: '#04070C', overflow: 'hidden'}}>
-      <GpuDepthStage theme={theme} opacity={0.7} />
+      <DepthBackground theme={theme} profile={props.profile} opacity={0.7} />
       <div
         style={{
           border: '1px solid ' + theme.border,
@@ -252,7 +275,7 @@ const DataFullShot = (props: DirectedSceneProps) => {
   );
   return (
     <AbsoluteFill style={{background: theme.background, overflow: 'hidden'}}>
-      <GpuDepthStage theme={theme} opacity={0.82} />
+      <DepthBackground theme={theme} profile={props.profile} opacity={0.82} />
       <div
         style={{
           inset: format === 'short' ? '70px 34px 255px' : '24px 34px 36px',
@@ -283,7 +306,7 @@ const Graphic3DShot = (props: DirectedSceneProps) => {
   );
   return (
     <AbsoluteFill style={{background: theme.background, overflow: 'hidden'}}>
-      <GpuDepthStage theme={theme} />
+      <DepthBackground theme={theme} profile={props.profile} />
       <div
         style={{
           background: 'rgba(6,10,16,.62)',
@@ -352,7 +375,7 @@ const SplitScreenShot = (props: DirectedSceneProps) => {
           position: 'relative',
         }}
       >
-        <GpuDepthStage theme={theme} opacity={0.72} />
+        <DepthBackground theme={theme} profile={props.profile} opacity={0.72} />
         <div
           style={{
             bottom: 42,
@@ -387,13 +410,15 @@ const ChapterShot = ({
   scene,
   theme,
   format,
+  profile,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
   format: 'long' | 'short';
+  profile?: RenderEffectsProfileV1;
 }) => (
   <AbsoluteFill style={{background: theme.background, overflow: 'hidden'}}>
-    <GpuDepthStage theme={theme} />
+    <DepthBackground theme={theme} profile={profile} />
     <div
       style={{
         alignItems: 'flex-start',
@@ -520,7 +545,7 @@ const MicroBeatLayer = ({
 };
 
 export const DirectedScene = (props: DirectedSceneProps) => {
-  const {scene, theme, durationInFrames, format} = props;
+  const {scene, theme, durationInFrames, format, profile} = props;
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const shot = resolveShotStyle(scene);
@@ -531,13 +556,13 @@ export const DirectedScene = (props: DirectedSceneProps) => {
     frame,
     durationInFrames,
     fps,
-    Number(camera.intensity ?? (format === 'short' ? 1.02 : 0.82)),
+    Number(camera.intensity ?? (format === 'short' ? 1.02 : 0.82)) * Number(profile?.camera_intensity ?? 1),
     camera.target ?? {},
   );
 
   const strongest = (scene.micro_beats ?? []).reduce(
     (best, beat) => {
-      const strength = microBeatEnvelope(frame, fps, Number(beat.at ?? 0));
+      const strength = microBeatEnvelope(frame, fps, Number(beat.at ?? 0)) * Number(profile?.microbeat_strength ?? 1);
       return strength > best.strength ? {kind: beat.kind, strength} : best;
     },
     {kind: '', strength: 0},
@@ -567,8 +592,8 @@ export const DirectedScene = (props: DirectedSceneProps) => {
   else if (shot === 'data_full') shotNode = <DataFullShot {...props} />;
   else if (shot === 'graphic_3d') shotNode = <Graphic3DShot {...props} />;
   else if (shot === 'split_screen') shotNode = <SplitScreenShot {...props} />;
-  else if (shot === 'chapter') shotNode = <ChapterShot scene={scene} theme={theme} format={format} />;
-  else shotNode = <AbsoluteFill style={{background: theme.background}}><GpuDepthStage theme={theme} opacity={0.9} /><KineticHeadline scene={scene} theme={theme} format={format} /></AbsoluteFill>;
+  else if (shot === 'chapter') shotNode = <ChapterShot scene={scene} theme={theme} format={format} profile={profile} />;
+  else shotNode = <AbsoluteFill style={{background: theme.background}}><DepthBackground theme={theme} profile={profile} opacity={0.9} /><KineticHeadline scene={scene} theme={theme} format={format} /></AbsoluteFill>;
 
   return (
     <AbsoluteFill style={{background: theme.background, overflow: 'hidden'}}>
