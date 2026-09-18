@@ -93,6 +93,19 @@ export const headlineWordProgress = (
 
 
 
+export const editorialLineProgress = (
+  frame: number,
+  fps: number,
+  order: number,
+  family: VfxFamily,
+): number => {
+  const cadence = family === 'snap' ? 0.075 : 0.105;
+  const durationSeconds = family === 'snap' ? 0.29 : 0.39;
+  const delay = Math.round((0.09 + Math.max(0, order) * cadence) * fps);
+  const duration = Math.max(1, Math.round(durationSeconds * fps));
+  return smoothstep((frame - delay) / duration);
+};
+
 export const editorialItemStyle = (
   frame: number,
   fps: number,
