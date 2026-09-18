@@ -1,6 +1,7 @@
-import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 
 import {overlappedSceneWindow} from '../polish';
+import {sourceMediaStyle} from '../vfx';
 import {
   resolveSceneAsset,
   scenePresentationStyle,
@@ -15,6 +16,8 @@ export type ActiveShortVisual = {
   scene: SceneSpecV1;
   asset?: AssetRecordV1;
   style: React.CSSProperties;
+  localFrame: number;
+  durationInFrames: number;
 };
 
 export const activeShortVisual = (
@@ -47,11 +50,24 @@ export const activeShortVisual = (
       ? resolveSceneAsset(scene, pkg.assets.records)
       : undefined,
     style: scenePresentationStyle(scene, localFrame, Math.max(1, pkg.manifest.fps || 30)),
+    localFrame,
+    durationInFrames: window.durationInFrames,
   };
 };
 
 const SourceOverlay = ({visual, theme}: {visual: ActiveShortVisual; theme: ChannelTheme}) => {
+  const {fps} = useVideoConfig();
   if (!visual.asset) return null;
+  const mediaStyle = sourceMediaStyle(
+    visual.localFrame,
+    visual.durationInFrames,
+    fps,
+    theme.motionIntensity * 0.82,
+  );
+  const scanProgress = Math.max(
+    0,
+    Math.min(1, visual.localFrame / Math.max(1, visual.durationInFrames - 1)),
+  );
   return (
     <div
       style={{
@@ -60,18 +76,70 @@ const SourceOverlay = ({visual, theme}: {visual: ActiveShortVisual; theme: Chann
         border: `1px solid ${theme.border}`,
         borderRadius: 38,
         bottom: 430,
-        boxShadow: `0 34px 100px rgba(0,0,0,0.52), 0 0 0 1px ${theme.accent}18`,
-        left: 64,
+        boxShadow: `0 42px 130px rgba(0,0,0,0.58), 0 0 0 1px ${theme.accent}28, inset 0 1px 0 rgba(255,255,255,.10)`,
+        left: 58,
         overflow: 'hidden',
+        perspective: 1400,
         position: 'absolute',
-        right: 64,
-        top: 650,
+        right: 58,
+        top: 625,
+        transformOrigin: 'center center',
       }}
     >
       <Img
         src={staticFile(visual.asset.local_path)}
-        style={{height: '100%', objectFit: 'cover', objectPosition: 'top center', transform: 'scale(1.02)', width: '100%'}}
+        style={{
+          ...mediaStyle,
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'top center',
+          width: '100%',
+        }}
       />
+      <div
+        style={{
+          background: `linear-gradient(90deg, transparent, ${theme.accent}AA, rgba(255,255,255,.82), ${theme.secondary}99, transparent)`,
+          boxShadow: `0 0 32px ${theme.accent}55`,
+          height: 3,
+          left: 0,
+          opacity: 0.42,
+          position: 'absolute',
+          right: 0,
+          top: `${10 + scanProgress * 76}%`,
+        }}
+      />
+      <div
+        style={{
+          alignItems: 'center',
+          backdropFilter: 'blur(18px)',
+          background: 'rgba(4,7,12,.58)',
+          border: `1px solid ${theme.border}`,
+          borderRadius: 999,
+          color: theme.accent,
+          display: 'flex',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: 18,
+          fontWeight: 900,
+          gap: 10,
+          left: 22,
+          letterSpacing: 1.6,
+          padding: '10px 14px',
+          position: 'absolute',
+          textTransform: 'uppercase',
+          top: 22,
+        }}
+      >
+        <span
+          style={{
+            background: theme.accent,
+            borderRadius: 99,
+            boxShadow: `0 0 18px ${theme.accent}`,
+            height: 9,
+            width: 9,
+          }}
+        />
+        source capture
+      </div>
       <div
         style={{
           background: 'linear-gradient(transparent, rgba(0,0,0,0.78))',
