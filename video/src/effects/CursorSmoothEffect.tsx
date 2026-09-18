@@ -6,18 +6,21 @@ export type CursorSmoothEffectProps = EffectComponentProps;
 
 const parsePoints = (value: unknown): CursorPoint[] => {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => {
-      if (!item || typeof item !== 'object') return null;
-      const raw = item as Record<string, unknown>;
-      if (typeof raw.x !== 'number' || typeof raw.y !== 'number') return null;
-      return {
-        x: Math.min(1, Math.max(0, raw.x)),
-        y: Math.min(1, Math.max(0, raw.y)),
-        at: typeof raw.at === 'number' ? Math.min(1, Math.max(0, raw.at)) : undefined,
-      };
-    })
-    .filter((item): item is CursorPoint => Boolean(item));
+  const points: CursorPoint[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const raw = item as Record<string, unknown>;
+    if (typeof raw.x !== 'number' || typeof raw.y !== 'number') continue;
+    const point: CursorPoint = {
+      x: Math.min(1, Math.max(0, raw.x)),
+      y: Math.min(1, Math.max(0, raw.y)),
+    };
+    if (typeof raw.at === 'number' && Number.isFinite(raw.at)) {
+      point.at = Math.min(1, Math.max(0, raw.at));
+    }
+    points.push(point);
+  }
+  return points;
 };
 
 export const CursorSmoothEffect = ({effect, children, theme, durationInFrames}: CursorSmoothEffectProps) => {
