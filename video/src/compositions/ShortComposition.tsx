@@ -25,6 +25,9 @@ import {
 import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
 import {
   cinematicCameraStyle,
+  editorialFocusWeight,
+  editorialItemStyle,
+  editorialLineProgress,
   headlineWordProgress,
   PremiumVfxBackdrop,
   TransitionAccent,
@@ -100,10 +103,12 @@ const VerticalSceneVisual = ({
   scene,
   theme,
   hasSourceAsset,
+  durationInFrames,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
   hasSourceAsset: boolean;
+  durationInFrames: number;
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -150,12 +155,54 @@ const VerticalSceneVisual = ({
   }
 
   if (scene.scene_type === 'quote') {
+    const quote = dataText(scene, 'quote', scene.narration);
+    const words = quote.trim().split(/\s+/).filter(Boolean);
+    const family = theme.transitionFamily;
+    const attributionProgress = editorialLineProgress(frame, fps, Math.ceil(words.length / 4) + 1, family);
     return (
       <VerticalPanel theme={theme}>
-        <div style={{borderLeft: `9px solid ${theme.accent}`, fontSize: 48, fontWeight: 800, lineHeight: 1.18, paddingLeft: 26}}>
-          “{dataText(scene, 'quote', scene.narration)}”
+        <div style={{fontSize: 50, fontWeight: 820, lineHeight: 1.16, paddingLeft: 18, position: 'relative'}}>
+          <span
+            style={{
+              color: theme.accent,
+              fontSize: 88,
+              left: -18,
+              lineHeight: 0.7,
+              opacity: editorialLineProgress(frame, fps, 0, family) * 0.82,
+              position: 'absolute',
+              top: -20,
+            }}
+          >
+            “
+          </span>
+          {words.map((word, index) => {
+            const progress = editorialLineProgress(frame, fps, Math.floor(index / 4), family);
+            return (
+              <span
+                key={`${word}-${index}`}
+                style={{
+                  display: 'inline-block',
+                  filter: `blur(${((1 - progress) * 5).toFixed(2)}px)`,
+                  marginRight: 11,
+                  opacity: progress,
+                  transform: `translateY(${((1 - progress) * 18).toFixed(2)}px)`,
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
         </div>
-        <div style={{fontSize: 24, marginTop: 24, opacity: 0.52}}>
+        <div
+          style={{
+            color: theme.accent,
+            fontSize: 24,
+            fontWeight: 750,
+            marginTop: 26,
+            opacity: attributionProgress * 0.72,
+            transform: `translateX(${(1 - attributionProgress) * 18}px)`,
+          }}
+        >
           {dataText(scene, 'attribution', scene.source_ids[0] || '')}
         </div>
       </VerticalPanel>
@@ -166,20 +213,17 @@ const VerticalSceneVisual = ({
     const items = dataList(scene, 'items');
     const visible = (items.length ? items : scene.emphasis).slice(0, 4);
     return (
-      <div style={{display: 'grid', gap: 16}}>
-        {visible.map((item, index) => {
-          const progress = staggerProgress(frame, fps, index + 2);
-          return (
-            <div key={`${item}-${index}`} style={{opacity: progress, transform: `translateX(${(1 - progress) * 28}px)`}}>
-              <VerticalPanel theme={theme}>
-                <div style={{display: 'flex', gap: 18}}>
-                  <span style={{color: theme.accent, fontSize: 28, fontWeight: 900}}>{String(index + 1).padStart(2, '0')}</span>
-                  <span style={{fontSize: 31, fontWeight: 760, lineHeight: 1.2}}>{item}</span>
-                </div>
-              </VerticalPanel>
-            </div>
-          );
-        })}
+      <div style={{display: 'grid', gap: 16, perspective: 1300}}>
+        {visible.map((item, index) => (
+          <div key={`${item}-${index}`} style={editorialItemStyle(frame, fps, index, theme.transitionFamily)}>
+            <VerticalPanel theme={theme}>
+              <div style={{display: 'flex', gap: 18}}>
+                <span style={{color: theme.accent, fontSize: 28, fontWeight: 900}}>{String(index + 1).padStart(2, '0')}</span>
+                <span style={{fontSize: 31, fontWeight: 760, lineHeight: 1.2}}>{item}</span>
+              </div>
+            </VerticalPanel>
+          </div>
+        ))}
       </div>
     );
   }
@@ -188,43 +232,109 @@ const VerticalSceneVisual = ({
     const left = dataText(scene, 'before', dataText(scene, 'left', 'Before'));
     const right = dataText(scene, 'after', dataText(scene, 'right', 'After'));
     return (
-      <div style={{display: 'grid', gap: 18}}>
-        {[['A', left], ['B', right]].map(([label, text], index) => {
-          const progress = staggerProgress(frame, fps, index + 2);
-          return (
-            <div key={label} style={{opacity: progress, transform: `translateY(${(1 - progress) * 24}px)`}}>
-              <VerticalPanel theme={theme}>
-                <div style={{color: index === 1 ? theme.accent : theme.muted, fontSize: 22, fontWeight: 900, letterSpacing: 2}}>{label}</div>
-                <div style={{fontSize: 40, fontWeight: 800, marginTop: 10}}>{text}</div>
-              </VerticalPanel>
-            </div>
-          );
-        })}
+      <div style={{display: 'grid', gap: 18, perspective: 1300}}>
+        {[['A', left], ['B', right]].map(([label, text], index) => (
+          <div key={label} style={editorialItemStyle(frame, fps, index, theme.transitionFamily)}>
+            <VerticalPanel theme={theme}>
+              <div style={{color: index === 1 ? theme.accent : theme.muted, fontSize: 22, fontWeight: 900, letterSpacing: 2}}>{label}</div>
+              <div style={{fontSize: 40, fontWeight: 800, marginTop: 10}}>{text}</div>
+            </VerticalPanel>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (scene.scene_type === 'code') {
+    const lines = dataText(scene, 'code', dataText(scene, 'snippet', '// verified example')).split(/\r?\n/).slice(0, 8);
+    const progresses = lines.map((_, index) => editorialLineProgress(frame, fps, index, theme.transitionFamily));
+    const activeLine = Math.max(0, progresses.reduce((latest, progress, index) => (progress > 0.18 ? index : latest), 0));
     return (
-      <pre
+      <div
         style={{
           background: '#090D14',
           border: `1px solid ${theme.border}`,
           borderRadius: 32,
+          boxShadow: '0 30px 90px rgba(0,0,0,.36)',
           color: '#E7EDF6',
           fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-          fontSize: 27,
-          lineHeight: 1.45,
-          margin: 0,
-          maxHeight: 470,
+          fontSize: 25,
+          lineHeight: 1.42,
+          maxHeight: 500,
           overflow: 'hidden',
-          padding: 30,
-          whiteSpace: 'pre-wrap',
+          padding: '24px 0 28px',
         }}
       >
-        <span style={{color: theme.accent}}>{dataText(scene, 'language', 'code')}</span>{'\n\n'}
-        {dataText(scene, 'code', dataText(scene, 'snippet', '// verified example'))}
-      </pre>
+        <div style={{borderBottom: `1px solid ${theme.border}`, color: theme.accent, fontSize: 18, fontWeight: 850, letterSpacing: 2, padding: '0 28px 18px', textTransform: 'uppercase'}}>
+          {dataText(scene, 'language', 'code')}
+        </div>
+        <div style={{paddingTop: 16}}>
+          {lines.map((line, index) => {
+            const progress = progresses[index];
+            const active = index === activeLine;
+            return (
+              <div
+                key={`${line}-${index}`}
+                style={{
+                  background: active ? `linear-gradient(90deg, ${theme.accent}18, transparent)` : 'transparent',
+                  borderLeft: `3px solid ${active ? theme.accent : 'transparent'}`,
+                  display: 'grid',
+                  gridTemplateColumns: '46px 1fr',
+                  opacity: 0.18 + progress * 0.82,
+                  padding: '3px 26px 3px 16px',
+                  transform: `translateX(${((1 - progress) * 24).toFixed(2)}px)`,
+                }}
+              >
+                <span style={{color: active ? theme.accent : theme.muted, opacity: 0.72, textAlign: 'right'}}>{String(index + 1).padStart(2, '0')}</span>
+                <span style={{paddingLeft: 18, whiteSpace: 'pre-wrap'}}>{line || ' '}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (scene.scene_type === 'process') {
+    const steps = (dataList(scene, 'steps').length ? dataList(scene, 'steps') : ['Input', 'Process', 'Output']).slice(0, 4);
+    return (
+      <div style={{display: 'grid', gap: 16, perspective: 1300}}>
+        {steps.map((step, index) => {
+          const motion = editorialItemStyle(frame, fps, index, theme.transitionFamily);
+          const focus = editorialFocusWeight(frame, durationInFrames, index, steps.length);
+          const motionOpacity = typeof motion.opacity === 'number' ? motion.opacity : 1;
+          const motionTransform = typeof motion.transform === 'string' ? motion.transform : '';
+          return (
+            <div
+              key={`${step}-${index}`}
+              style={{
+                ...motion,
+                opacity: motionOpacity * (0.7 + focus * 0.3),
+                transform: `${motionTransform} scale(${(0.985 + focus * 0.024).toFixed(4)})`,
+              }}
+            >
+              <VerticalPanel theme={theme}>
+                <div style={{alignItems: 'center', display: 'flex', gap: 18}}>
+                  <span style={{color: theme.accent, fontSize: 26, fontWeight: 950}}>{String(index + 1).padStart(2, '0')}</span>
+                  <span style={{fontSize: 32, fontWeight: 820, lineHeight: 1.16}}>{step}</span>
+                </div>
+                <div
+                  style={{
+                    background: `linear-gradient(90deg, ${theme.accent}, transparent)`,
+                    borderRadius: 99,
+                    height: 4,
+                    marginTop: 20,
+                    opacity: 0.3 + focus * 0.7,
+                    transform: `scaleX(${focus.toFixed(4)})`,
+                    transformOrigin: 'left',
+                    width: '100%',
+                  }}
+                />
+              </VerticalPanel>
+            </div>
+          );
+        })}
+      </div>
     );
   }
 
@@ -381,7 +491,12 @@ const VerticalScene = ({
             transform: `translateY(${(1 - visualProgress) * 34}px) scale(${0.985 + visualProgress * 0.015})`,
           }}
         >
-          <VerticalSceneVisual scene={scene} theme={theme} hasSourceAsset={hasSourceAsset} />
+          <VerticalSceneVisual
+            scene={scene}
+            theme={theme}
+            hasSourceAsset={hasSourceAsset}
+            durationInFrames={durationInFrames}
+          />
         </div>
       </div>
       <div
