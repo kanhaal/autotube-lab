@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.planning.scene_schema import (
     AUDIO_CUE_KINDS,
     CAMERA_PRESETS,
+    CUT_BIASES,
     EFFECT_KINDS,
     MICRO_BEAT_KINDS,
     MOTIONS,
@@ -26,7 +27,7 @@ charts, comparisons, timelines, counters, diagrams, and typography over generic 
 Return JSON with channel_id, format='longform', and scenes. Each scene must contain id, narration,
 purpose, scene_type, headline, subheadline, source_ids, asset_ids, motion, emphasis, transition,
 fallback_scene_type, and data. V4 scenes MAY also include shot_style, camera, micro_beats,
-audio_cues, effects, and transition_out.
+audio_cues, effects, transition_out, cut_bias, and cut_offset_seconds.
 
 Edit like a professional YouTube editor, not a presentation designer:
 - Alternate visual grammar. Do not repeat the same headline-plus-card layout in consecutive scenes.
@@ -36,6 +37,9 @@ Edit like a professional YouTube editor, not a presentation designer:
   callouts, text emphasis, source inserts, or micro-beats.
 - Camera moves must have editorial intent: target a detail, reveal context, create emphasis, or
   maintain motion continuity into the next cut. Avoid constant random drifting.
+- Use cut_bias='visual_lead' for a J-cut feel (new visual arrives before the narration boundary) or
+  cut_bias='audio_lead' for an L-cut feel (old visual trails under the next narration phrase). Keep
+  cut_offset_seconds subtle, usually 0.08-0.35 seconds.
 - Use transition_out selectively. Match cuts should preserve a shape/position; smash cuts are rare;
   cross dissolves are for softer time/context changes; whip pans are for energetic motion continuity.
 - Add restrained audio_cues on meaningful edits: whoosh for motion, impact/braam for reveals,
@@ -72,6 +76,7 @@ def _prompt(channel_id: str) -> str:
         f"\nRegistered transitions: {sorted(TRANSITIONS)}"
         f"\nRegistered shot styles: {sorted(SHOT_STYLES)}"
         f"\nRegistered camera presets: {sorted(CAMERA_PRESETS)}"
+        f"\nRegistered cut biases: {sorted(CUT_BIASES)}"
         f"\nRegistered effects: {sorted(EFFECT_KINDS)}"
         f"\nRegistered micro-beats: {sorted(MICRO_BEAT_KINDS)}"
         f"\nRegistered audio cues: {sorted(AUDIO_CUE_KINDS)}"
