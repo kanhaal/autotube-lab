@@ -2,6 +2,7 @@ import {
   AbsoluteFill,
   Audio,
   Img,
+  OffthreadVideo,
   Sequence,
   staticFile,
   useCurrentFrame,
@@ -10,6 +11,7 @@ import {
 
 import {CaptionTrack} from '../components/CaptionTrack';
 import {EffectStage} from '../effects/EffectStage';
+import {isVideoAsset, mediaPlaybackRateForScene, sceneHasEffect} from '../effects/effectRegistry';
 import {resolveChannelEffectProfile, type ChannelEffectProfile} from '../effects/channelEffects';
 import {overlappedSceneWindow, sceneEnvelope} from '../polish';
 import {SceneRenderer} from '../scenes/SceneRenderer';
@@ -53,6 +55,7 @@ const SceneSequence = ({
   const envelope = sceneEnvelope(frame, durationInFrames, Math.max(6, Math.round(fps * 0.24)));
   const mediaStyle = sourceMediaStyle(frame, durationInFrames, fps, theme.motionIntensity * 0.72);
   const scanProgress = Math.max(0, Math.min(1, frame / Math.max(1, durationInFrames - 1)));
+  const mediaPlaybackRate = mediaPlaybackRateForScene(scene, frame, fps);
   const narrationBeat = narrationEmphasisBeat(
     captions,
     (absoluteFrom + frame) / Math.max(1, fps),
@@ -91,16 +94,31 @@ const SceneSequence = ({
             transformOrigin: 'center center',
           }}
         >
-          <Img
-            src={staticFile(sourceAsset.local_path)}
-            style={{
-              ...mediaStyle,
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'top center',
-              width: '100%',
-            }}
-          />
+          {isVideoAsset(sourceAsset) ? (
+            <OffthreadVideo
+              src={staticFile(sourceAsset.local_path)}
+              muted
+              playbackRate={mediaPlaybackRate}
+              style={{
+                ...mediaStyle,
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'top center',
+                width: '100%',
+              }}
+            />
+          ) : (
+            <Img
+              src={staticFile(sourceAsset.local_path)}
+              style={{
+                ...mediaStyle,
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'top center',
+                width: '100%',
+              }}
+            />
+          )}
           <div
             style={{
               background: `linear-gradient(90deg, transparent, ${theme.accent}99, rgba(255,255,255,.72), ${theme.secondary}88, transparent)`,
@@ -176,6 +194,30 @@ const SceneSequence = ({
   );
 };
 
+const EffectAwareCaptionTrack = ({pkg, theme}: {pkg: RenderPackageV1; theme: ChannelTheme}) => {
+  const frame = useCurrentFrame();
+  const windows = sceneFrameWindows(pkg);
+  const activeScene = pkg.scenes.scenes.find((scene, index) => {
+    const window = windows[index];
+    if (!window) return false;
+    const editWindow = overlappedSceneWindow(
+      window,
+      index,
+      pkg.scenes.scenes.length,
+      Math.max(8, Math.round(pkg.manifest.fps * 0.3)),
+    );
+    return frame >= editWindow.from && frame < editWindow.from + editWindow.durationInFrames;
+  });
+  if (activeScene && sceneHasEffect(activeScene, 'kinetic_word_reveal')) return null;
+  return (
+    <CaptionTrack
+      cues={pkg.captions.cues}
+      accent={theme.accent}
+      energetic={theme.motionIntensity > 1}
+    />
+  );
+};
+
 export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: ChannelTheme}) => {
   const windows = sceneFrameWindows(pkg);
   const profile = resolveChannelEffectProfile(pkg);
@@ -207,7 +249,7 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
           </Sequence>
         );
       })}
-      <CaptionTrack cues={pkg.captions.cues} accent={theme.accent} energetic={theme.motionIntensity > 1} />
+      <EffectAwareCaptionTrack pkg={pkg} theme={theme} />
     </AbsoluteFill>
   );
 };
