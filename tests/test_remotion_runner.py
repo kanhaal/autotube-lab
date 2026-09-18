@@ -21,7 +21,9 @@ def test_remotion_command_is_argument_safe(tmp_path: Path):
     assert "--audio-bitrate=192K" in command
     assert "--x264-preset=slow" in command
     assert "--color-space=bt709" in command
+    assert "--gl=angle" in command
     assert "--concurrency=4" in command
+    assert "--hardware-acceleration=required" not in command
 
 
 def test_remotion_runner_resolves_default_npx_shim(monkeypatch):
@@ -84,3 +86,54 @@ def test_remotion_runner_failure_surfaces_render_output(monkeypatch, tmp_path: P
     assert "Failed to decode audio asset" in message
     assert "Rendering frames" in message
     assert "remotion-render.log" in message
+
+
+
+def test_nvidia_profile_requires_hardware_acceleration_and_uses_bitrate(
+    monkeypatch,
+    tmp_path: Path,
+):
+    package_dir = tmp_path / "package"
+    package_dir.mkdir()
+    out = tmp_path / "episode.mp4"
+    monkeypatch.setenv("AUTOTUBE_RENDER_ACCEL", "nvidia")
+    monkeypatch.setenv("AUTOTUBE_GPU_VIDEO_BITRATE", "36M")
+
+    runner = RemotionRunner(video_dir=Path("video"), npx="npx")
+    command = runner.command(package_dir, "KernelRushLong", out)
+
+    assert "--hardware-acceleration=required" in command
+    assert "--video-bitrate=36M" in command
+    assert "--gl=angle" in command
+    assert "--crf=14" not in command
+    assert "--x264-preset=slow" not in command
+
+
+def test_auto_profile_uses_nvidia_when_gpu_is_detected(monkeypatch, tmp_path: Path):
+    package_dir = tmp_path / "package"
+    package_dir.mkdir()
+    out = tmp_path / "episode.mp4"
+    monkeypatch.setenv("AUTOTUBE_RENDER_ACCEL", "auto")
+    monkeypatch.setattr("app.rendering.runner.nvidia_gpu_name", lambda: "NVIDIA GeForce RTX 4050 Laptop GPU")
+
+    runner = RemotionRunner(video_dir=Path("video"), npx="npx")
+    command = runner.command(package_dir, "KernelRushLong", out)
+
+    assert "--hardware-acceleration=required" in command
+    assert "--video-bitrate=35M" in command
+    assert "--crf=14" not in command
+
+
+def test_auto_profile_stays_cpu_when_nvidia_is_unavailable(monkeypatch, tmp_path: Path):
+    package_dir = tmp_path / "package"
+    package_dir.mkdir()
+    out = tmp_path / "episode.mp4"
+    monkeypatch.setenv("AUTOTUBE_RENDER_ACCEL", "auto")
+    monkeypatch.setattr("app.rendering.runner.nvidia_gpu_name", lambda: None)
+
+    runner = RemotionRunner(video_dir=Path("video"), npx="npx")
+    command = runner.command(package_dir, "KernelRushLong", out)
+
+    assert "--crf=14" in command
+    assert "--x264-preset=slow" in command
+    assert "--hardware-acceleration=required" not in command
