@@ -7,6 +7,51 @@ export type CompositionId =
   | 'KernelRushShort'
   | 'LobbySignalShort';
 
+export type SceneEffectKind =
+  | 'auto_zoom'
+  | 'spotlight_dim'
+  | 'cursor_smooth'
+  | 'code_typewriter'
+  | 'stat_count_up'
+  | 'split_compare'
+  | 'speed_ramp'
+  | 'scroll_reveal'
+  | 'tier_list'
+  | 'vs_screen'
+  | 'ticker_overlay'
+  | 'meme_flash'
+  | 'freeze_frame'
+  | 'kinetic_word_reveal'
+  | 'kinetic_infographic'
+  | 'progress_reveal'
+  | 'icon_morph'
+  | 'tag_pop'
+  | 'parallax_layers'
+  | 'grid_reveal'
+  | 'card_flip'
+  | 'underline_sweep'
+  | 'leader_line'
+  | 'waveform_overlay'
+  | 'chromatic_pulse'
+  | 'light_leak'
+  | 'film_grain'
+  | 'vignette_pulse'
+  | 'rack_focus'
+  | 'particle_burst'
+  | 'screen_shake'
+  | 'scanline_flicker'
+  | 'duotone_flash'
+  | 'lower_third'
+  | 'intro_sting'
+  | 'chapter_card';
+
+export type TransitionOutV1 = 'glitch_rgb_split' | 'whoosh_zoom';
+
+export type SceneEffectRequestV1 = {
+  kind: SceneEffectKind;
+  [key: string]: unknown;
+};
+
 export type RenderManifestV1 = {
   schema_version: '1';
   format: RenderFormat;
@@ -41,6 +86,8 @@ export type SceneSpecV1 = {
   transition: string;
   fallback_scene_type: string;
   data: Record<string, unknown>;
+  effects?: SceneEffectRequestV1[];
+  transition_out?: TransitionOutV1 | null;
 };
 
 export type ScenePlanV1 = {
