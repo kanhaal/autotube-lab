@@ -15,8 +15,7 @@ from app.rendering.package import build_render_package
 def test_build_render_package_is_self_contained_and_uses_relative_paths(tmp_path: Path):
     source_image = tmp_path / "source.png"
     source_image.write_bytes(b"png-data")
-    narration = tmp_path / "narration.wav"
-    narration.write_bytes(b"wav-data")
+    narration = _write_test_wav(tmp_path / "narration.wav")
 
     scene_plan = ScenePlan(
         channel_id="kernelrush",
@@ -94,8 +93,7 @@ def test_build_render_package_is_self_contained_and_uses_relative_paths(tmp_path
 def test_build_render_package_rejects_source_paths_that_escape_declared_root(tmp_path: Path):
     outside = tmp_path / "outside.png"
     outside.write_bytes(b"x")
-    audio = tmp_path / "audio.wav"
-    audio.write_bytes(b"x")
+    audio = _write_test_wav(tmp_path / "audio.wav")
     plan = ScenePlan(
         channel_id="kernelrush",
         format="longform",
