@@ -13,7 +13,15 @@ describe('effectRegistry', () => {
   });
 
   it('registers both selectable transition_out effects', () => {
-    expect(Object.keys(transitionRegistry).sort()).toEqual(['glitch_rgb_split', 'whoosh_zoom']);
+    expect(Object.keys(transitionRegistry).sort()).toEqual([
+      'cross_dissolve',
+      'glitch_rgb_split',
+      'liquid_displacement',
+      'match_cut',
+      'smash_cut',
+      'whip_pan',
+      'whoosh_zoom',
+    ]);
   });
 
   it('hard clamps meme flashes to 0.5-1.5 seconds', () => {
