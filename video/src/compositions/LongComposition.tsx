@@ -9,6 +9,8 @@ import {
 } from 'remotion';
 
 import {CaptionTrack} from '../components/CaptionTrack';
+import {EffectStage} from '../effects/EffectStage';
+import {resolveChannelEffectProfile, type ChannelEffectProfile} from '../effects/channelEffects';
 import {overlappedSceneWindow, sceneEnvelope} from '../polish';
 import {SceneRenderer} from '../scenes/SceneRenderer';
 import {narrationEmphasisBeat, sourceMediaStyle, TransitionAccent} from '../vfx';
@@ -28,6 +30,9 @@ const SceneSequence = ({
   durationInFrames,
   absoluteFrom,
   captions,
+  profile,
+  channelName,
+  isFirstScene,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
@@ -35,6 +40,9 @@ const SceneSequence = ({
   durationInFrames: number;
   absoluteFrom: number;
   captions: CaptionCueV1[];
+  profile: ChannelEffectProfile;
+  channelName: string;
+  isFirstScene: boolean;
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -51,7 +59,7 @@ const SceneSequence = ({
     scene.emphasis,
   );
 
-  return (
+  const base = (
     <AbsoluteFill
       style={{
         ...presentation,
@@ -151,10 +159,26 @@ const SceneSequence = ({
       <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
     </AbsoluteFill>
   );
+  return (
+    <EffectStage
+      scene={scene}
+      theme={theme}
+      profile={profile}
+      assets={assets}
+      captions={captions}
+      absoluteFrom={absoluteFrom}
+      durationInFrames={durationInFrames}
+      isFirstScene={isFirstScene}
+      channelName={channelName}
+    >
+      {base}
+    </EffectStage>
+  );
 };
 
 export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: ChannelTheme}) => {
   const windows = sceneFrameWindows(pkg);
+  const profile = resolveChannelEffectProfile(pkg);
   return (
     <AbsoluteFill style={{background: theme.background, color: theme.foreground, fontFamily: 'Arial, Helvetica, sans-serif'}}>
       {pkg.manifest.audio_path ? <Audio src={staticFile(pkg.manifest.audio_path)} /> : null}
@@ -176,6 +200,9 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
               durationInFrames={editWindow.durationInFrames}
               absoluteFrom={editWindow.from}
               captions={pkg.captions.cues}
+              profile={profile}
+              channelName={pkg.manifest.channel_name}
+              isFirstScene={index === 0}
             />
           </Sequence>
         );
