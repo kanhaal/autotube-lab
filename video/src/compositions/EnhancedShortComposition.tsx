@@ -45,28 +45,30 @@ const SourceOverlay = ({visual, theme}: {visual: ActiveShortVisual; theme: Chann
         ...visual.style,
         background: '#090C12',
         border: `1px solid ${theme.border}`,
-        borderRadius: 30,
-        bottom: 500,
-        boxShadow: '0 26px 72px rgba(0,0,0,0.46)',
-        left: 86,
+        borderRadius: 38,
+        bottom: 430,
+        boxShadow: `0 34px 100px rgba(0,0,0,0.52), 0 0 0 1px ${theme.accent}18`,
+        left: 64,
         overflow: 'hidden',
         position: 'absolute',
-        right: 146,
-        top: 780,
+        right: 64,
+        top: 650,
       }}
     >
       <Img
         src={staticFile(visual.asset.local_path)}
-        style={{height: '100%', objectFit: 'cover', objectPosition: 'top center', width: '100%'}}
+        style={{height: '100%', objectFit: 'cover', objectPosition: 'top center', transform: 'scale(1.02)', width: '100%'}}
       />
       <div
         style={{
           background: 'linear-gradient(transparent, rgba(0,0,0,0.78))',
           bottom: 0,
           color: '#FFFFFF',
-          fontSize: 19,
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: 21,
+          fontWeight: 800,
           left: 0,
-          padding: '48px 22px 18px',
+          padding: '76px 26px 22px',
           position: 'absolute',
           right: 0,
         }}
