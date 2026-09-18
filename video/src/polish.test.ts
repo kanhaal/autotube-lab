@@ -3,6 +3,7 @@ import {describe, expect, it} from 'vitest';
 import {
   activeWordIndex,
   layoutForScene,
+  overlappedSceneWindow,
   sceneEnvelope,
   staggerProgress,
 } from './polish';
@@ -43,6 +44,17 @@ describe('production visual polish helpers', () => {
     expect(staggerProgress(6, 30, 0)).toBeGreaterThan(0);
     expect(staggerProgress(6, 30, 2)).toBe(0);
     expect(staggerProgress(30, 30, 2)).toBeCloseTo(1, 3);
+  });
+
+  it('overlaps neighboring scene windows for real edit transitions', () => {
+    expect(overlappedSceneWindow({from: 100, durationInFrames: 90}, 1, 3, 8)).toEqual({
+      from: 96,
+      durationInFrames: 98,
+      preRoll: 4,
+      postRoll: 4,
+    });
+    expect(overlappedSceneWindow({from: 0, durationInFrames: 100}, 0, 3, 8).preRoll).toBe(0);
+    expect(overlappedSceneWindow({from: 200, durationInFrames: 100}, 2, 3, 8).postRoll).toBe(0);
   });
 
   it('uses denser layouts for source and data scenes', () => {
