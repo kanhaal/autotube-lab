@@ -21,6 +21,21 @@ def _similarity(expected: str, actual: str) -> float:
     return SequenceMatcher(None, _normalize_text(expected), _normalize_text(actual)).ratio()
 
 
+def _cuda_runtime_library_error(exc: RuntimeError) -> bool:
+    message = str(exc).lower()
+    library = any(marker in message for marker in ("cublas", "cudnn", "cuda"))
+    unavailable = any(
+        marker in message
+        for marker in (
+            "not found",
+            "cannot be loaded",
+            "could not locate",
+            "unable to load",
+        )
+    )
+    return library and unavailable
+
+
 class FasterWhisperTranscriber:
     def __init__(
         self,
@@ -36,6 +51,11 @@ class FasterWhisperTranscriber:
             "AUTOTUBE_CAPTION_COMPUTE_TYPE",
             "float16",
         )
+        self.allow_cpu_fallback = os.getenv(
+            "AUTOTUBE_CAPTION_CPU_FALLBACK",
+            "1",
+        ).strip().lower() not in {"0", "false", "no"}
+        self.fallback_reason: str | None = None
         self._model = model
 
     def _load_model(self):
@@ -49,13 +69,59 @@ class FasterWhisperTranscriber:
             )
         return self._model
 
-    def transcribe(self, path, word_timestamps=True):
+    def _transcribe_once(self, path, *, word_timestamps: bool, vad_filter: bool):
         return self._load_model().transcribe(
             str(path),
             word_timestamps=word_timestamps,
-            vad_filter=True,
+            vad_filter=vad_filter,
             condition_on_previous_text=False,
         )
+
+    def _fallback_to_cpu(self, exc: RuntimeError) -> bool:
+        if (
+            not self.allow_cpu_fallback
+            or not self.device.lower().startswith("cuda")
+            or not _cuda_runtime_library_error(exc)
+        ):
+            return False
+
+        self.fallback_reason = str(exc)
+        self.release()
+        self.device = "cpu"
+        self.compute_type = os.getenv("AUTOTUBE_CAPTION_CPU_COMPUTE_TYPE", "int8")
+        return True
+
+    def transcribe(self, path, word_timestamps=True, vad_filter=True):
+        try:
+            segments, info = self._transcribe_once(
+                path,
+                word_timestamps=word_timestamps,
+                vad_filter=vad_filter,
+            )
+        except RuntimeError as exc:
+            if not self._fallback_to_cpu(exc):
+                raise
+            return self._transcribe_once(
+                path,
+                word_timestamps=word_timestamps,
+                vad_filter=vad_filter,
+            )
+
+        def guarded_segments():
+            try:
+                buffered = list(segments)
+            except RuntimeError as exc:
+                if not self._fallback_to_cpu(exc):
+                    raise
+                retry_segments, _ = self._transcribe_once(
+                    path,
+                    word_timestamps=word_timestamps,
+                    vad_filter=vad_filter,
+                )
+                buffered = list(retry_segments)
+            yield from buffered
+
+        return guarded_segments(), info
 
     def release(self) -> None:
         self._model = None
