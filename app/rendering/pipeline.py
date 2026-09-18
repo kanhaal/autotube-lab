@@ -52,6 +52,12 @@ def _configured_audio_library() -> AudioLibrary:
     return AudioLibrary.from_yaml(path)
 
 
+def _release(resource) -> None:
+    release = getattr(resource, "release", None)
+    if callable(release):
+        release()
+
+
 def _master_audio(narration: Path, channel_cfg: dict, out: Path) -> Path:
     audio_cfg = channel_cfg.get("audio") or {}
     if not isinstance(audio_cfg, dict):
@@ -92,8 +98,14 @@ def render_professional_episode(
     render_runner = runner or RemotionRunner()
     speech_transcriber = transcriber or FasterWhisperTranscriber()
 
-    narration = Path(tts.synthesize(script, output / "narration.wav"))
-    captions = caption_aligner(narration, script, speech_transcriber)
+    try:
+        narration = Path(tts.synthesize(script, output / "narration.wav"))
+    finally:
+        _release(tts)
+    try:
+        captions = caption_aligner(narration, script, speech_transcriber)
+    finally:
+        _release(speech_transcriber)
     master_audio = _master_audio(narration, channel_cfg, output / "master.wav")
     long_package = package_builder(
         channel_cfg,
@@ -126,16 +138,29 @@ def render_professional_episode(
     short_package: Path | None = None
     short_error: str | None = None
     try:
+        owned_short_llm = llm is None
         short_llm = llm or OllamaJsonClient()
-        short_story = short_builder(channel_id, packet, script, short_llm)
+        try:
+            short_story = short_builder(channel_id, packet, script, short_llm)
+        finally:
+            if owned_short_llm:
+                unload = getattr(short_llm, "unload", None)
+                if callable(unload):
+                    unload()
         short_assets = asset_preparer(
             short_story.scene_plan,
             packet,
             channel_cfg,
             output / "short-assets",
         )
-        short_audio = Path(tts.synthesize(short_story.script, output / "short-narration.wav"))
-        short_captions = caption_aligner(short_audio, short_story.script, speech_transcriber)
+        try:
+            short_audio = Path(tts.synthesize(short_story.script, output / "short-narration.wav"))
+        finally:
+            _release(tts)
+        try:
+            short_captions = caption_aligner(short_audio, short_story.script, speech_transcriber)
+        finally:
+            _release(speech_transcriber)
         short_master_audio = _master_audio(
             short_audio,
             channel_cfg,
