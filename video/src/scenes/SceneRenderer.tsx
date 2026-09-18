@@ -1,4 +1,5 @@
 import type {ComponentType, ReactNode} from 'react';
+import {useCurrentFrame, useVideoConfig} from 'remotion';
 
 import {BrowserFrame} from '../components/BrowserFrame';
 import {Chart} from '../components/Chart';
@@ -7,6 +8,7 @@ import {SourceBadge} from '../components/SourceBadge';
 import {Stat} from '../components/Stat';
 import {Timeline} from '../components/Timeline';
 import {Headline} from '../components/Typography';
+import {layoutForScene, staggerProgress} from '../polish';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
 type Theme = Record<string, unknown>;
@@ -76,9 +78,12 @@ const themeColor = (theme: Theme, key: string, fallback: string): string => {
 };
 
 const frameStyle = (theme: Theme) => ({
-  background: themeColor(theme, 'background', '#060912'),
+  background:
+    `radial-gradient(circle at 78% 16%, ${themeColor(theme, 'secondary', '#5AA7FF')}18, transparent 30%), ` +
+    `radial-gradient(circle at 18% 88%, ${themeColor(theme, 'accent', '#67F5C5')}12, transparent 28%), ` +
+    themeColor(theme, 'background', '#060912'),
   color: themeColor(theme, 'foreground', '#F8FAFF'),
-  fontFamily: 'Inter, Arial, sans-serif',
+  fontFamily: 'Arial, Helvetica, sans-serif',
 });
 
 const accent = (theme: Theme) => themeColor(theme, 'accent', '#67F5C5');
@@ -88,28 +93,98 @@ const supportingText = (scene: SceneSpecV1) => scene.subheadline || scene.narrat
 const Panel = ({children, theme}: {children: ReactNode; theme: Theme}) => (
   <div
     style={{
-      background: 'rgba(255,255,255,0.06)',
+      backdropFilter: 'blur(18px)',
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035))',
       border: `1px solid ${themeColor(theme, 'border', 'rgba(255,255,255,0.14)')}`,
-      borderRadius: 28,
-      padding: 34,
+      borderRadius: 30,
+      boxShadow: '0 28px 80px rgba(0,0,0,0.26)',
+      padding: 36,
     }}
   >
     {children}
   </div>
 );
 
-const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: ReactNode; eyebrow?: string}) => (
-  <SafeFrame style={frameStyle(theme)}>
-    <div style={{display: 'flex', flexDirection: 'column', gap: 28, height: '100%', justifyContent: 'center'}}>
-      {eyebrow ? <SourceBadge label={eyebrow} /> : null}
-      {scene.headline ? <Headline text={scene.headline} /> : null}
-      {supportingText(scene) ? (
-        <div style={{fontSize: 30, lineHeight: 1.35, maxWidth: 1260, opacity: 0.72}}>{supportingText(scene)}</div>
+const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: ReactNode; eyebrow?: string}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const layout = layoutForScene(scene.scene_type, 'long');
+  const labelProgress = staggerProgress(frame, fps, 0);
+  const headlineProgress = staggerProgress(frame, fps, 1);
+  const bodyProgress = staggerProgress(frame, fps, 2);
+  const visualProgress = staggerProgress(frame, fps, 3);
+  const supporting = scene.subheadline || (layout === 'hero' ? scene.narration : '');
+  const headlineSize = layout === 'hero' ? 92 : layout === 'source' ? 76 : 72;
+
+  const textBlock = (
+    <div style={{maxWidth: layout === 'source' ? 720 : layout === 'data' ? 680 : 1380}}>
+      {eyebrow ? (
+        <div style={{opacity: labelProgress, transform: `translateY(${(1 - labelProgress) * 18}px)`}}>
+          <SourceBadge label={eyebrow} />
+        </div>
       ) : null}
-      {children}
+      {scene.headline ? (
+        <div
+          style={{
+            marginTop: eyebrow ? 26 : 0,
+            opacity: headlineProgress,
+            transform: `translateY(${(1 - headlineProgress) * 30}px)`,
+          }}
+        >
+          <Headline
+            text={scene.headline}
+            maxChars={layout === 'hero' ? 26 : 20}
+            style={{fontSize: headlineSize, fontWeight: 900, letterSpacing: -3}}
+          />
+        </div>
+      ) : null}
+      {supporting ? (
+        <div
+          style={{
+            fontSize: layout === 'hero' ? 31 : 27,
+            fontWeight: 560,
+            lineHeight: 1.35,
+            marginTop: 24,
+            maxWidth: 900,
+            opacity: bodyProgress * 0.72,
+            transform: `translateY(${(1 - bodyProgress) * 18}px)`,
+          }}
+        >
+          {supporting}
+        </div>
+      ) : null}
     </div>
-  </SafeFrame>
-);
+  );
+
+  return (
+    <SafeFrame style={frameStyle(theme)}>
+      <div
+        style={{
+          alignItems: layout === 'data' ? 'center' : 'stretch',
+          display: layout === 'data' ? 'grid' : 'flex',
+          flexDirection: 'column',
+          gap: layout === 'data' ? 76 : 34,
+          gridTemplateColumns: layout === 'data' ? '0.78fr 1.22fr' : undefined,
+          height: '100%',
+          justifyContent: 'center',
+        }}
+      >
+        {textBlock}
+        {children ? (
+          <div
+            style={{
+              minWidth: 0,
+              opacity: visualProgress,
+              transform: `translateY(${(1 - visualProgress) * 34}px) scale(${0.985 + visualProgress * 0.015})`,
+            }}
+          >
+            {children}
+          </div>
+        ) : null}
+      </div>
+    </SafeFrame>
+  );
+};
 
 export const HookScene: SceneComponent = (props) => {
   const {scene, theme} = props;
@@ -126,18 +201,37 @@ export const HookScene: SceneComponent = (props) => {
 export const HeadlineScene: SceneComponent = (props) => <SceneShell {...props} eyebrow="UPDATE" />;
 
 export const SourceBrowserScene: SceneComponent = (props) => {
-  const {scene, theme} = props;
+  const {scene, theme, assets} = props;
   const url = stringValue(scene.data, 'url', stringValue(scene.data, 'source_url', 'source.local'));
   const body = stringValue(scene.data, 'body', supportingText(scene));
+  const hasCapturedVisual = scene.asset_ids.some((id) => assets.some((asset) => asset.id === id));
   return (
     <SceneShell {...props} eyebrow="SOURCE">
-      <BrowserFrame url={url}>
-        <div style={{display: 'flex', flexDirection: 'column', gap: 18}}>
-          <div style={{fontSize: 42, fontWeight: 800}}>{stringValue(scene.data, 'page_title', scene.headline || 'Source')}</div>
-          <div style={{fontSize: 25, lineHeight: 1.5}}>{body || 'Verified source material'}</div>
-          <div style={{background: accent(theme), borderRadius: 999, height: 7, marginTop: 8, width: '34%'}} />
+      {hasCapturedVisual ? (
+        <div
+          style={{
+            alignItems: 'center',
+            color: accent(theme),
+            display: 'flex',
+            fontSize: 21,
+            fontWeight: 800,
+            gap: 12,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+          }}
+        >
+          <span style={{background: accent(theme), borderRadius: 99, boxShadow: `0 0 22px ${accent(theme)}66`, height: 12, width: 12}} />
+          Captured evidence
         </div>
-      </BrowserFrame>
+      ) : (
+        <BrowserFrame url={url}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 18}}>
+            <div style={{fontSize: 42, fontWeight: 800}}>{stringValue(scene.data, 'page_title', scene.headline || 'Source')}</div>
+            <div style={{fontSize: 25, lineHeight: 1.5}}>{body || 'Verified source material'}</div>
+            <div style={{background: accent(theme), borderRadius: 999, height: 7, marginTop: 8, width: '34%'}} />
+          </div>
+        </BrowserFrame>
+      )}
     </SceneShell>
   );
 };
