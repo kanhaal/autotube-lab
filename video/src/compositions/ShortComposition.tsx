@@ -23,6 +23,12 @@ import {
   sceneSupportsVerifiedAsset,
 } from '../scenes/presentation';
 import type {CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
+import {
+  cinematicCameraStyle,
+  headlineWordProgress,
+  PremiumVfxBackdrop,
+  TransitionAccent,
+} from '../vfx';
 import type {ChannelTheme} from '../themes/types';
 import {sceneFrameWindows} from './sceneTiming';
 import {validateShortPackage} from './shortTiming';
@@ -258,6 +264,23 @@ const VerticalScene = ({
   const visualProgress = staggerProgress(frame, fps, 3);
   const headlineSize = scene.headline.length > 42 ? 64 : scene.headline.length > 25 ? 76 : 88;
   const topPadding = layout === 'hero' ? 190 : layout === 'source' ? 120 : 128;
+  const camera = cinematicCameraStyle(
+    frame,
+    durationInFrames,
+    fps,
+    theme.transitionFamily,
+    theme.motionIntensity * 0.48,
+  );
+  const presentationTransform =
+    typeof presentation.transform === 'string' ? presentation.transform : '';
+  const cameraTransform = typeof camera.transform === 'string' ? camera.transform : '';
+  const headlineWords = (scene.headline || scene.narration).trim().split(/\s+/).filter(Boolean);
+  const emphasisWords = new Set(
+    scene.emphasis
+      .flatMap((value) => value.toLowerCase().split(/\s+/))
+      .map((value) => value.replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean),
+  );
 
   return (
     <AbsoluteFill
@@ -272,11 +295,16 @@ const VerticalScene = ({
         padding: `${topPadding}px 68px 330px`,
       }}
     >
+      <PremiumVfxBackdrop theme={theme} format="short" />
       <div
         style={{
           ...presentation,
+          ...camera,
           height: '100%',
           opacity: (typeof presentation.opacity === 'number' ? presentation.opacity : 1) * envelope,
+          position: 'relative',
+          transform: `${presentationTransform} ${cameraTransform}`.trim(),
+          zIndex: 2,
         }}
       >
         <div
@@ -298,13 +326,35 @@ const VerticalScene = ({
             fontSize: headlineSize,
             fontWeight: 900,
             letterSpacing: -3.2,
-            lineHeight: 0.98,
-            maxWidth: 910,
+            lineHeight: 0.95,
+            maxWidth: 930,
             opacity: headlineProgress,
-            transform: `translateY(${(1 - headlineProgress) * 28}px)`,
           }}
         >
-          {scene.headline || scene.narration}
+          {headlineWords.map((word, index) => {
+            const wordProgress = headlineWordProgress(frame, fps, index);
+            const normalized = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const accentWord =
+              emphasisWords.has(normalized) ||
+              (headlineWords.length <= 7 && index === headlineWords.length - 1);
+            return (
+              <span
+                key={`${word}-${index}`}
+                style={{
+                  color: accentWord ? theme.accent : '#FFFFFF',
+                  display: 'inline-block',
+                  filter: `blur(${((1 - wordProgress) * 9).toFixed(2)}px)`,
+                  marginRight: 16,
+                  opacity: wordProgress,
+                  textShadow: accentWord ? `0 0 30px ${theme.accent}33` : 'none',
+                  transform: `translate3d(0,${((1 - wordProgress) * 54).toFixed(2)}px,0) rotateX(${((1 - wordProgress) * -12).toFixed(2)}deg) scale(${(0.94 + wordProgress * 0.06).toFixed(3)})`,
+                  transformOrigin: 'center bottom',
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
         </div>
         {scene.subheadline ? (
           <div
@@ -332,16 +382,19 @@ const VerticalScene = ({
       </div>
       <div
         style={{
-          background: theme.accent,
+          background: `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
           borderRadius: 99,
           bottom: 94,
+          boxShadow: `0 0 26px ${theme.accent}55`,
           height: 6,
           left: 68,
-          opacity: 0.55,
+          opacity: 0.62,
           position: 'absolute',
-          width: 74,
+          width: 92,
+          zIndex: 3,
         }}
       />
+      <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
     </AbsoluteFill>
   );
 };
@@ -402,12 +455,15 @@ const VerticalCaptionTrack = ({cues, theme}: {cues: CaptionCueV1[]; theme: Chann
             key={`${word}-${index}`}
             style={{
               background: index === active ? theme.accent : 'transparent',
-              borderRadius: index === active ? 9 : 0,
+              borderRadius: index === active ? 10 : 0,
+              boxShadow: index === active ? `0 0 26px ${theme.accent}44` : 'none',
               color: index === active ? '#07100D' : '#FFFFFF',
               display: 'inline-block',
               margin: '2px 4px',
-              padding: index === active ? '2px 7px 4px' : '2px 3px 4px',
-              transform: index === active ? 'scale(1.06)' : 'scale(1)',
+              opacity: active >= 0 && Math.abs(index - active) > 4 ? 0.62 : 1,
+              padding: index === active ? '2px 8px 5px' : '2px 3px 5px',
+              textShadow: index === active ? 'none' : '0 2px 14px rgba(0,0,0,.42)',
+              transform: index === active ? 'translateY(-2px) scale(1.075)' : 'scale(1)',
             }}
           >
             {word}
