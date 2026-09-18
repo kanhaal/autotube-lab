@@ -24,6 +24,7 @@ const SceneSequence = ({
   absoluteFrom,
   captions,
   defaultTransition,
+  profile,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
@@ -32,6 +33,7 @@ const SceneSequence = ({
   absoluteFrom: number;
   captions: CaptionCueV1[];
   defaultTransition?: TransitionOutKind;
+  profile?: RenderPackageV1['manifest']['render_effects'];
 }) => (
   <>
     <SceneEffects
@@ -50,6 +52,7 @@ const SceneSequence = ({
         durationInFrames={durationInFrames}
         absoluteFrom={absoluteFrom}
         format="long"
+        profile={profile}
       />
     </SceneEffects>
     <SceneTransitionOut
@@ -107,6 +110,7 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
               absoluteFrom={editWindow.from}
               captions={pkg.captions.cues}
               defaultTransition={pkg.manifest.render_effects?.default_transition_out}
+              profile={pkg.manifest.render_effects}
             />
           </Sequence>
         );
