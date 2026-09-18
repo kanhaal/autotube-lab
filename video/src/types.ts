@@ -9,7 +9,53 @@ export type CompositionId =
   | 'KernelRushIntroSting'
   | 'LobbySignalIntroSting';
 
-export type TransitionOutKind = 'glitch_rgb_split' | 'whoosh_zoom';
+export type TransitionOutKind =
+  | 'glitch_rgb_split'
+  | 'whoosh_zoom'
+  | 'whip_pan'
+  | 'match_cut'
+  | 'smash_cut'
+  | 'cross_dissolve'
+  | 'liquid_displacement';
+
+export type ShotStyle =
+  | 'source_full'
+  | 'source_detail'
+  | 'kinetic_text'
+  | 'data_full'
+  | 'graphic_3d'
+  | 'split_screen'
+  | 'chapter'
+  | 'editorial';
+
+export type CameraPreset =
+  | 'locked'
+  | 'dolly_in'
+  | 'dolly_out'
+  | 'orbit_left'
+  | 'orbit_right'
+  | 'whip_pan'
+  | 'handheld_micro'
+  | 'rack_push'
+  | 'crane_down';
+
+export type CameraDirectionV1 = {
+  preset?: CameraPreset;
+  intensity?: number;
+  target?: {x?: number; y?: number};
+};
+
+export type MicroBeatV1 = {
+  at: number;
+  kind: 'focus_punch' | 'callout' | 'tag_pop' | 'underline' | 'flash' | 'shake' | 'crop_shift';
+  [key: string]: unknown;
+};
+
+export type AudioCueV1 = {
+  at: number;
+  kind: 'whoosh' | 'impact' | 'click' | 'riser' | 'braam' | 'ding' | 'glitch' | 'static';
+  volume?: number;
+};
 
 export type SceneEffectV1 = {
   kind: string;
@@ -61,6 +107,10 @@ export type SceneSpecV1 = {
   data: Record<string, unknown>;
   effects?: SceneEffectV1[];
   transition_out?: TransitionOutKind | null;
+  shot_style?: ShotStyle | null;
+  camera?: CameraDirectionV1;
+  micro_beats?: MicroBeatV1[];
+  audio_cues?: AudioCueV1[];
 };
 
 export type ScenePlanV1 = {
