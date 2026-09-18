@@ -1,6 +1,6 @@
 import type {ComponentType} from 'react';
 
-import type {SceneEffectKind, TransitionOutV1} from '../types';
+import type {SceneEffectKind, SceneSpecV1, TransitionOutV1} from '../types';
 import {AutoZoomEffect} from './AutoZoomEffect';
 import {CardFlipEffect} from './CardFlipEffect';
 import {ChapterCard} from './ChapterCard';
@@ -26,7 +26,7 @@ import {RackFocusEffect} from './RackFocusEffect';
 import {ScanlineFlickerEffect} from './ScanlineFlickerEffect';
 import {ScreenShakeEffect} from './ScreenShakeEffect';
 import {ScrollRevealEffect} from './ScrollRevealEffect';
-import {SpeedRampEffect} from './SpeedRampEffect';
+import {SpeedRampEffect, speedRampPlaybackRate} from './SpeedRampEffect';
 import {SplitCompareEffect} from './SplitCompareEffect';
 import {SpotlightDimEffect} from './SpotlightDimEffect';
 import {StatCountUpEffect} from './StatCountUpEffect';
@@ -42,6 +42,18 @@ import {GlitchRgbSplitTransition} from './GlitchRgbSplitTransition';
 import {WhooshZoomTransition} from './WhooshZoomTransition';
 
 export {clampMemeFlashSeconds};
+
+export const sceneHasEffect = (scene: SceneSpecV1, kind: SceneEffectKind): boolean =>
+  Boolean(scene.effects?.some((effect) => effect.kind === kind));
+
+export const mediaPlaybackRateForScene = (
+  scene: SceneSpecV1,
+  frame: number,
+  fps: number,
+): number => {
+  const effect = scene.effects?.find((candidate) => candidate.kind === 'speed_ramp');
+  return effect ? speedRampPlaybackRate(frame, fps, effect) : 1;
+};
 
 export const CORE_EFFECT_KINDS: readonly SceneEffectKind[] = [
   'auto_zoom',
