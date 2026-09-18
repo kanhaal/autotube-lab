@@ -172,7 +172,11 @@ const SceneShell = ({scene, theme, children, eyebrow, durationInFrames}: ScenePr
                   filter: `blur(${((1 - progress) * 7).toFixed(2)}px)`,
                   marginRight: 18,
                   opacity: progress,
-                  textShadow: accentWord ? `0 0 34px ${accent(theme)}22` : 'none',
+                  textShadow: accentWord
+                    ? `0 0 34px ${accent(theme)}22`
+                    : family === 'snap' && progress < 0.98
+                      ? `${((1 - progress) * 3).toFixed(2)}px 0 ${themeColor(theme, 'secondary', '#9CFF57')}55, ${((progress - 1) * 3).toFixed(2)}px 0 ${accent(theme)}44`
+                      : 'none',
                   transform: `translate3d(0,${((1 - progress) * 42).toFixed(2)}px,0) rotateX(${((1 - progress) * -9).toFixed(2)}deg)`,
                   transformOrigin: 'center bottom',
                 }}
