@@ -346,7 +346,11 @@ const VerticalScene = ({
                   filter: `blur(${((1 - wordProgress) * 9).toFixed(2)}px)`,
                   marginRight: 16,
                   opacity: wordProgress,
-                  textShadow: accentWord ? `0 0 30px ${theme.accent}33` : 'none',
+                  textShadow: accentWord
+                    ? `0 0 30px ${theme.accent}33`
+                    : theme.transitionFamily === 'snap' && wordProgress < 0.98
+                      ? `${((1 - wordProgress) * 3.5).toFixed(2)}px 0 ${theme.secondary}55, ${((wordProgress - 1) * 3.5).toFixed(2)}px 0 ${theme.accent}44`
+                      : 'none',
                   transform: `translate3d(0,${((1 - wordProgress) * 54).toFixed(2)}px,0) rotateX(${((1 - wordProgress) * -12).toFixed(2)}deg) scale(${(0.94 + wordProgress * 0.06).toFixed(3)})`,
                   transformOrigin: 'center bottom',
                 }}
