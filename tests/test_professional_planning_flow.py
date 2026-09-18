@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -98,7 +99,11 @@ def test_dry_run_emits_editorial_script_and_scene_artifacts(monkeypatch, tmp_pat
         editorial_llm=FakeLLM(),
     )
 
-    episode_dir = tmp_path / "output" / result["episode"]
+    latest = json.loads(
+        (tmp_path / "output" / "kernelrush" / "latest.json").read_text(encoding="utf-8")
+    )
+    episode_dir = Path(latest["path"])
+    assert episode_dir.parts[-3:-1] == ("kernelrush", "runs")
     assert result["status"] == "generated"
     assert (episode_dir / "editorial.json").exists()
     assert (episode_dir / "script.txt").exists()
