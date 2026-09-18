@@ -11,13 +11,13 @@ import {
 import {CaptionTrack} from '../components/CaptionTrack';
 import {overlappedSceneWindow, sceneEnvelope} from '../polish';
 import {SceneRenderer} from '../scenes/SceneRenderer';
-import {sourceMediaStyle, TransitionAccent} from '../vfx';
+import {narrationEmphasisBeat, sourceMediaStyle, TransitionAccent} from '../vfx';
 import {
   resolveSceneAsset,
   scenePresentationStyle,
   sceneSupportsVerifiedAsset,
 } from '../scenes/presentation';
-import type {AssetRecordV1, RenderPackageV1, SceneSpecV1} from '../types';
+import type {AssetRecordV1, CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
 import type {ChannelTheme} from '../themes/types';
 import {sceneFrameWindows} from './sceneTiming';
 
@@ -26,11 +26,15 @@ const SceneSequence = ({
   theme,
   assets,
   durationInFrames,
+  absoluteFrom,
+  captions,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
   assets: AssetRecordV1[];
   durationInFrames: number;
+  absoluteFrom: number;
+  captions: CaptionCueV1[];
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -41,6 +45,11 @@ const SceneSequence = ({
   const envelope = sceneEnvelope(frame, durationInFrames, Math.max(6, Math.round(fps * 0.24)));
   const mediaStyle = sourceMediaStyle(frame, durationInFrames, fps, theme.motionIntensity * 0.72);
   const scanProgress = Math.max(0, Math.min(1, frame / Math.max(1, durationInFrames - 1)));
+  const narrationBeat = narrationEmphasisBeat(
+    captions,
+    (absoluteFrom + frame) / Math.max(1, fps),
+    scene.emphasis,
+  );
 
   return (
     <AbsoluteFill
@@ -54,6 +63,7 @@ const SceneSequence = ({
         theme={theme}
         assets={assets}
         durationInFrames={durationInFrames}
+        narrationBeat={narrationBeat}
       />
       {sourceAsset ? (
         <div
@@ -164,6 +174,8 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
               theme={theme}
               assets={pkg.assets.records}
               durationInFrames={editWindow.durationInFrames}
+              absoluteFrom={editWindow.from}
+              captions={pkg.captions.cues}
             />
           </Sequence>
         );
