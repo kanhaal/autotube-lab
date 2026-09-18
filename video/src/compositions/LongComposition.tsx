@@ -11,6 +11,7 @@ import {
 import {CaptionTrack} from '../components/CaptionTrack';
 import {overlappedSceneWindow, sceneEnvelope} from '../polish';
 import {SceneRenderer} from '../scenes/SceneRenderer';
+import {sourceMediaStyle, TransitionAccent} from '../vfx';
 import {
   resolveSceneAsset,
   scenePresentationStyle,
@@ -38,6 +39,8 @@ const SceneSequence = ({
     : undefined;
   const presentation = scenePresentationStyle(scene, frame, fps);
   const envelope = sceneEnvelope(frame, durationInFrames, Math.max(6, Math.round(fps * 0.24)));
+  const mediaStyle = sourceMediaStyle(frame, durationInFrames, fps, theme.motionIntensity * 0.72);
+  const scanProgress = Math.max(0, Math.min(1, frame / Math.max(1, durationInFrames - 1)));
 
   return (
     <AbsoluteFill
@@ -46,7 +49,12 @@ const SceneSequence = ({
         opacity: (typeof presentation.opacity === 'number' ? presentation.opacity : 1) * envelope,
       }}
     >
-      <SceneRenderer scene={scene} theme={theme} assets={assets} />
+      <SceneRenderer
+        scene={scene}
+        theme={theme}
+        assets={assets}
+        durationInFrames={durationInFrames}
+      />
       {sourceAsset ? (
         <div
           style={{
@@ -54,17 +62,63 @@ const SceneSequence = ({
             border: `1px solid ${theme.border}`,
             borderRadius: 26,
             bottom: 145,
-            boxShadow: `0 34px 100px rgba(0,0,0,0.48), 0 0 0 1px ${theme.accent}12`,
+            boxShadow: `0 42px 120px rgba(0,0,0,0.54), 0 0 0 1px ${theme.accent}20, inset 0 1px 0 rgba(255,255,255,.08)`,
             left: '50.5%',
             overflow: 'hidden',
+            perspective: 1500,
             position: 'absolute',
             right: 105,
             top: 145,
+            transform: `rotateY(${theme.transitionFamily === 'snap' ? -1.1 : -0.55}deg) rotateX(0.35deg)`,
+            transformOrigin: 'center center',
           }}
         >
           <Img
             src={staticFile(sourceAsset.local_path)}
-            style={{height: '100%', objectFit: 'cover', objectPosition: 'top center', transform: 'scale(1.015)', width: '100%'}}
+            style={{
+              ...mediaStyle,
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'top center',
+              width: '100%',
+            }}
+          />
+          <div
+            style={{
+              background: `linear-gradient(90deg, transparent, ${theme.accent}99, rgba(255,255,255,.72), ${theme.secondary}88, transparent)`,
+              boxShadow: `0 0 28px ${theme.accent}55`,
+              height: 2,
+              left: 0,
+              opacity: 0.34,
+              position: 'absolute',
+              right: 0,
+              top: `${8 + scanProgress * 78}%`,
+              transform: 'translateZ(0)',
+            }}
+          />
+          <div
+            style={{
+              border: `1px solid ${theme.accent}40`,
+              borderBottom: 0,
+              borderRight: 0,
+              height: 46,
+              left: 18,
+              position: 'absolute',
+              top: 18,
+              width: 46,
+            }}
+          />
+          <div
+            style={{
+              border: `1px solid ${theme.secondary}44`,
+              borderLeft: 0,
+              borderTop: 0,
+              bottom: 18,
+              height: 46,
+              position: 'absolute',
+              right: 18,
+              width: 46,
+            }}
           />
           <div
             style={{
@@ -84,6 +138,7 @@ const SceneSequence = ({
           </div>
         </div>
       ) : null}
+      <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
     </AbsoluteFill>
   );
 };
