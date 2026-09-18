@@ -9,6 +9,9 @@ import {
 } from 'remotion';
 
 import {CaptionTrack} from '../components/CaptionTrack';
+import {IntroSting} from '../effects/IntroSting';
+import {LowerThird} from '../effects/LowerThird';
+import {SceneEffects, SceneTransitionOut} from '../effects/effectRegistry';
 import {overlappedSceneWindow, sceneEnvelope} from '../polish';
 import {SceneRenderer} from '../scenes/SceneRenderer';
 import {narrationEmphasisBeat, sourceMediaStyle, TransitionAccent} from '../vfx';
@@ -17,7 +20,7 @@ import {
   scenePresentationStyle,
   sceneSupportsVerifiedAsset,
 } from '../scenes/presentation';
-import type {AssetRecordV1, CaptionCueV1, RenderPackageV1, SceneSpecV1} from '../types';
+import type {AssetRecordV1, CaptionCueV1, RenderPackageV1, SceneSpecV1, TransitionOutKind} from '../types';
 import type {ChannelTheme} from '../themes/types';
 import {sceneFrameWindows} from './sceneTiming';
 
@@ -28,6 +31,7 @@ const SceneSequence = ({
   durationInFrames,
   absoluteFrom,
   captions,
+  defaultTransition,
 }: {
   scene: SceneSpecV1;
   theme: ChannelTheme;
@@ -35,6 +39,7 @@ const SceneSequence = ({
   durationInFrames: number;
   absoluteFrom: number;
   captions: CaptionCueV1[];
+  defaultTransition?: TransitionOutKind;
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -52,7 +57,9 @@ const SceneSequence = ({
   );
 
   return (
-    <AbsoluteFill
+    <>
+      <SceneEffects scene={scene} theme={theme} assets={assets} captions={captions} durationInFrames={durationInFrames} absoluteFrom={absoluteFrom}>
+        <AbsoluteFill
       style={{
         ...presentation,
         opacity: (typeof presentation.opacity === 'number' ? presentation.opacity : 1) * envelope,
@@ -148,8 +155,11 @@ const SceneSequence = ({
           </div>
         </div>
       ) : null}
-      <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
-    </AbsoluteFill>
+          <TransitionAccent theme={theme} durationInFrames={durationInFrames} />
+        </AbsoluteFill>
+      </SceneEffects>
+      <SceneTransitionOut scene={scene} defaultTransition={defaultTransition} theme={theme} assets={assets} captions={captions} durationInFrames={durationInFrames} absoluteFrom={absoluteFrom} />
+    </>
   );
 };
 
@@ -158,6 +168,8 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
   return (
     <AbsoluteFill style={{background: theme.background, color: theme.foreground, fontFamily: 'Arial, Helvetica, sans-serif'}}>
       {pkg.manifest.audio_path ? <Audio src={staticFile(pkg.manifest.audio_path)} /> : null}
+      {pkg.manifest.render_effects?.intro_sting ? <Sequence from={0} durationInFrames={Math.max(1, Math.round(pkg.manifest.fps * 1.05))}><IntroSting channelName={pkg.manifest.channel_name} theme={theme} /></Sequence> : null}
+      {pkg.manifest.render_effects?.lower_third ? <Sequence from={Math.round(pkg.manifest.fps * 1.05)} durationInFrames={Math.max(1, Math.round(pkg.manifest.fps * 3))}><LowerThird channelName={pkg.manifest.channel_name} label={pkg.manifest.title} theme={theme} /></Sequence> : null}
       {pkg.scenes.scenes.map((scene, index) => {
         const window = windows[index];
         if (!window) return null;
@@ -176,6 +188,7 @@ export const LongComposition = ({pkg, theme}: {pkg: RenderPackageV1; theme: Chan
               durationInFrames={editWindow.durationInFrames}
               absoluteFrom={editWindow.from}
               captions={pkg.captions.cues}
+              defaultTransition={pkg.manifest.render_effects?.default_transition_out}
             />
           </Sequence>
         );
