@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 
 import {
   cinematicCameraStyle,
+  editorialItemStyle,
   headlineWordProgress,
   premiumVfxProfile,
   sourceMediaStyle,
@@ -33,6 +34,16 @@ describe('premium editorial VFX', () => {
     expect(precision.gridOpacity).toBeGreaterThan(0);
     expect(snap.streakOpacity).toBeGreaterThan(precision.streakOpacity);
     expect(snap.transitionBoost).toBeGreaterThan(precision.transitionBoost);
+  });
+
+  it('gives repeated cards staggered physical motion instead of appearing as a block', () => {
+    const first = editorialItemStyle(0, 30, 0, 'precision');
+    const later = editorialItemStyle(12, 30, 2, 'snap');
+
+    expect(first.opacity).toBe(0);
+    expect(String(first.transform)).toContain('translate3d(');
+    expect(Number(later.opacity)).toBeGreaterThan(0);
+    expect(String(later.transform)).toContain('scale(');
   });
 
   it('creates a multi-layer transition accent instead of a single flat fade', () => {
