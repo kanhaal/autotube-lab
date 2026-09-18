@@ -91,6 +91,31 @@ export const headlineWordProgress = (
   return smoothstep((frame - delay) / duration);
 };
 
+
+
+export const editorialItemStyle = (
+  frame: number,
+  fps: number,
+  order: number,
+  family: VfxFamily,
+): CSSProperties => {
+  const progress = headlineWordProgress(frame, fps, order + 1);
+  const direction = family === 'snap' ? (order % 2 === 0 ? 1 : -1) : 1;
+  const x = (1 - progress) * 34 * direction;
+  const y = (1 - progress) * 24;
+  const scale = 0.955 + progress * 0.045;
+  const rotate = family === 'snap' ? (1 - progress) * 1.8 * direction : (1 - progress) * 0.55;
+
+  return {
+    filter: `blur(${((1 - progress) * 5).toFixed(2)}px)`,
+    opacity: progress,
+    transform:
+      `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) ` +
+      `scale(${scale.toFixed(4)}) rotateZ(${rotate.toFixed(3)}deg)`,
+    transformOrigin: 'center center',
+  };
+};
+
 export const transitionAccentState = (
   frame: number,
   fps: number,
