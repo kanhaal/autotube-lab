@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -75,6 +76,74 @@ def _require_captions(package: object, issues: list[QualityIssue]) -> None:
         issues.append(QualityIssue("missing_captions", "render package has no captions.json"))
 
 
+def _is_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _validate_effect_contracts(package: object, issues: list[QualityIssue]) -> None:
+    package_path = Path(package) if package else None
+    scenes_path = package_path / "scenes.json" if package_path else None
+    if scenes_path is None or not scenes_path.is_file():
+        return
+
+    try:
+        payload = json.loads(scenes_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        issues.append(
+            QualityIssue(
+                "invalid_effect_manifest",
+                f"cannot inspect V3.5 effect contracts in {scenes_path}: {exc}",
+            )
+        )
+        return
+
+    scenes = payload.get("scenes", [])
+    if not isinstance(scenes, list):
+        return
+
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        scene_id = str(scene.get("id", "unknown"))
+        raw_effects = scene.get("effects", [])
+        if not isinstance(raw_effects, list):
+            continue
+        data = scene.get("data", {})
+        if not isinstance(data, dict):
+            data = {}
+
+        for effect in raw_effects:
+            if not isinstance(effect, dict):
+                continue
+            kind = str(effect.get("kind", ""))
+
+            if kind == "meme_flash":
+                duration = effect.get("duration_seconds", 0.75)
+                if not _is_number(duration) or not 0.5 <= float(duration) <= 1.5:
+                    issues.append(
+                        QualityIssue(
+                            "meme_flash_duration",
+                            f"scene {scene_id} meme_flash must be 0.5-1.5s; got {duration!r}",
+                        )
+                    )
+
+            if kind == "stat_count_up":
+                verified_value = effect.get("verified_value")
+                stored_value = data.get("value")
+                if (
+                    not _is_number(verified_value)
+                    or not _is_number(stored_value)
+                    or float(verified_value) != float(stored_value)
+                ):
+                    issues.append(
+                        QualityIssue(
+                            "stat_count_up_value_mismatch",
+                            f"scene {scene_id} stat_count_up verified_value "
+                            f"{verified_value!r} does not match stored scene value {stored_value!r}",
+                        )
+                    )
+
+
 def validate_longform(outputs, expected_duration: float, fact_ok: bool = True) -> QualityReport:
     issues: list[QualityIssue] = []
     video = _existing_file(getattr(outputs, "long_video", None))
@@ -96,7 +165,9 @@ def validate_longform(outputs, expected_duration: float, fact_ok: bool = True) -
                 )
             )
 
-    _require_captions(getattr(outputs, "render_package", None), issues)
+    package = getattr(outputs, "render_package", None)
+    _require_captions(package, issues)
+    _validate_effect_contracts(package, issues)
     thumbnails = tuple(getattr(outputs, "thumbnails", ()) or ())
     if not any(_existing_file(path) is not None for path in thumbnails):
         issues.append(QualityIssue("missing_thumbnail", "no rendered thumbnail artifact exists"))
@@ -125,5 +196,7 @@ def validate_short(outputs) -> QualityReport:
                 )
             )
 
-    _require_captions(getattr(outputs, "short_render_package", None), issues)
+    package = getattr(outputs, "short_render_package", None)
+    _require_captions(package, issues)
+    _validate_effect_contracts(package, issues)
     return _report(issues)
