@@ -443,11 +443,45 @@ export const ConclusionScene: SceneComponent = (props) => {
   );
 };
 
-export const FallbackEditorialScene: SceneComponent = (props) => (
-  <SceneShell {...props} eyebrow="EDITORIAL">
-    <div style={{fontSize: 24, fontWeight: 700, opacity: 0.5}}>Verified context • restrained visual fallback</div>
-  </SceneShell>
-);
+export const FallbackEditorialScene: SceneComponent = (props) => {
+  const {scene, theme} = props;
+  return (
+    <SceneShell {...props} eyebrow="EDITORIAL">
+      <div style={{display: 'grid', gap: 24, gridTemplateColumns: '1.2fr 0.8fr', maxWidth: 1360}}>
+        <Panel theme={theme}>
+          <div style={{color: accent(theme), fontSize: 20, fontWeight: 900, letterSpacing: 2.2, textTransform: 'uppercase'}}>
+            Context first
+          </div>
+          <div style={{fontSize: 34, fontWeight: 780, lineHeight: 1.22, marginTop: 18}}>
+            {scene.emphasis.slice(0, 3).join(' • ') || 'Verified context without invented imagery'}
+          </div>
+          <div style={{fontSize: 23, lineHeight: 1.45, marginTop: 20, opacity: 0.58}}>
+            Original editorial treatment keeps the pace moving when a source visual is unavailable.
+          </div>
+        </Panel>
+        <div
+          style={{
+            alignItems: 'flex-end',
+            background: `linear-gradient(145deg, ${accent(theme)}DD, ${themeColor(theme, 'secondary', accent(theme))}88)`,
+            borderRadius: 30,
+            boxShadow: `0 28px 80px ${accent(theme)}20`,
+            color: '#07100D',
+            display: 'flex',
+            fontSize: 22,
+            fontWeight: 900,
+            justifyContent: 'flex-start',
+            letterSpacing: 2,
+            minHeight: 260,
+            padding: 32,
+            textTransform: 'uppercase',
+          }}
+        >
+          Signal / context
+        </div>
+      </div>
+    </SceneShell>
+  );
+};
 
 export const SCENE_REGISTRY: Record<string, SceneComponent> = {
   hook: HookScene,
