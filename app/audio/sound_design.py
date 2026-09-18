@@ -229,3 +229,31 @@ def build_sound_design_events(
         for start_ms, kind, volume in deduped[:max_events]
     )
     return events
+
+
+
+def build_lowpass_windows(
+    scene_plan,
+    *,
+    duration_seconds: float,
+) -> tuple[tuple[int, int], ...]:
+    duration = max(0.001, float(duration_seconds))
+    windows = _scene_windows(scene_plan, duration)
+    result: list[tuple[int, int]] = []
+    for scene, (start, end) in zip(scene_plan.scenes, windows):
+        scene_duration = max(0.001, end - start)
+        for cue in scene.audio_cues:
+            if str(cue.get("kind", "")).strip() != "lowpass":
+                continue
+            local = max(0.0, min(scene_duration, float(cue.get("at", 0.0))))
+            length = max(0.15, min(1.8, float(cue.get("duration", 0.65))))
+            absolute_start = min(duration, start + local)
+            absolute_end = min(duration, absolute_start + length)
+            if absolute_end > absolute_start:
+                result.append(
+                    (
+                        int(round(absolute_start * 1000)),
+                        int(round((absolute_end - absolute_start) * 1000)),
+                    )
+                )
+    return tuple(result[:8])
