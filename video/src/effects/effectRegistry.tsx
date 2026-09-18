@@ -1,6 +1,6 @@
 import type {ComponentType} from 'react';
 
-import type {SceneEffectKind, SceneSpecV1, TransitionOutV1} from '../types';
+import type {AssetRecordV1, SceneEffectKind, SceneSpecV1, TransitionOutV1} from '../types';
 import {AutoZoomEffect} from './AutoZoomEffect';
 import {CardFlipEffect} from './CardFlipEffect';
 import {ChapterCard} from './ChapterCard';
@@ -45,6 +45,12 @@ export {clampMemeFlashSeconds};
 
 export const sceneHasEffect = (scene: SceneSpecV1, kind: SceneEffectKind): boolean =>
   Boolean(scene.effects?.some((effect) => effect.kind === kind));
+
+export const isVideoAsset = (asset: AssetRecordV1 | undefined): boolean => {
+  if (!asset) return false;
+  const kind = asset.kind.toLowerCase();
+  return kind.includes('video') || kind.includes('gameplay') || /\.(mp4|mov|m4v|webm)$/i.test(asset.local_path);
+};
 
 export const mediaPlaybackRateForScene = (
   scene: SceneSpecV1,
