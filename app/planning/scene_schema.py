@@ -89,7 +89,7 @@ CAMERA_PRESETS = {
     "rack_push",
     "crane_down",
 }
-AUDIO_CUE_KINDS = {"whoosh", "impact", "click", "riser", "braam", "ding", "glitch", "static"}
+AUDIO_CUE_KINDS = {"whoosh", "impact", "click", "riser", "braam", "ding", "glitch", "static", "lowpass"}
 MICRO_BEAT_KINDS = {"focus_punch", "callout", "tag_pop", "underline", "flash", "shake", "crop_shift"}
 FORMATS = {"longform", "short"}
 
