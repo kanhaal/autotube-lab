@@ -8,6 +8,14 @@ brand:
   foreground: "#FAF7FF"
   accent: "#FF4FD8"
   secondary: "#7CFF5B"
+effects:
+  transition_default: glitch_rgb_split
+  intro_sting_enabled: true
+  lower_third_enabled: true
+  lower_third_scene_types: [game_store, social_context, quote, chapter]
+  default_effects:
+    - kind: film_grain
+      opacity: 0.03
 voice:
   backend: chatterbox
   fallback_backend: kokoro
