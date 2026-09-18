@@ -328,6 +328,15 @@ def _v4_fixture_scenes(story: dict, format_name: str) -> list[dict]:
             ]
 
         scene["transition_out"] = transition_sequence[min(index, len(transition_sequence) - 1)]
+        if index % 3 == 0:
+            scene["cut_bias"] = "visual_lead"
+            scene["cut_offset_seconds"] = 0.16 if energetic else 0.12
+        elif index % 3 == 1:
+            scene["cut_bias"] = "audio_lead"
+            scene["cut_offset_seconds"] = 0.13 if energetic else 0.10
+        else:
+            scene["cut_bias"] = "neutral"
+            scene["cut_offset_seconds"] = 0.0
     return scenes
 
 
