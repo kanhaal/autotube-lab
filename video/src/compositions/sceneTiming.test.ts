@@ -122,3 +122,23 @@ describe('scene timing', () => {
     expect(end.from + end.durationInFrames).toBe(150);
   });
 });
+
+
+
+it('supports professional J/L-cut timing by offsetting the visual boundary', () => {
+  const visualLead = structuredClone(pkg) as RenderPackageV1;
+  visualLead.scenes.scenes[0].cut_bias = 'visual_lead';
+  visualLead.scenes.scenes[0].cut_offset_seconds = 0.2;
+  expect(sceneFrameWindows(visualLead)).toEqual([
+    {from: 0, durationInFrames: 24},
+    {from: 24, durationInFrames: 96},
+  ]);
+
+  const audioLead = structuredClone(pkg) as RenderPackageV1;
+  audioLead.scenes.scenes[0].cut_bias = 'audio_lead';
+  audioLead.scenes.scenes[0].cut_offset_seconds = 0.2;
+  expect(sceneFrameWindows(audioLead)).toEqual([
+    {from: 0, durationInFrames: 36},
+    {from: 36, durationInFrames: 84},
+  ]);
+});
