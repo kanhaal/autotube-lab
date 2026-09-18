@@ -7,8 +7,8 @@ import {SafeFrame} from '../components/SafeFrame';
 import {SourceBadge} from '../components/SourceBadge';
 import {Stat} from '../components/Stat';
 import {Timeline} from '../components/Timeline';
-import {Headline} from '../components/Typography';
 import {layoutForScene, staggerProgress} from '../polish';
+import {cinematicCameraStyle, headlineWordProgress, PremiumVfxBackdrop} from '../vfx';
 import type {AssetRecordV1, SceneSpecV1} from '../types';
 
 type Theme = Record<string, unknown>;
@@ -17,6 +17,7 @@ type SceneProps = {
   scene: SceneSpecV1;
   theme: Theme;
   assets: AssetRecordV1[];
+  durationInFrames?: number;
 };
 
 type SceneComponent = ComponentType<SceneProps>;
@@ -105,7 +106,7 @@ const Panel = ({children, theme}: {children: ReactNode; theme: Theme}) => (
   </div>
 );
 
-const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: ReactNode; eyebrow?: string}) => {
+const SceneShell = ({scene, theme, children, eyebrow, durationInFrames}: SceneProps & {children?: ReactNode; eyebrow?: string}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const layout = layoutForScene(scene.scene_type, 'long');
@@ -115,6 +116,22 @@ const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: 
   const visualProgress = staggerProgress(frame, fps, 3);
   const supporting = scene.subheadline || (layout === 'hero' ? scene.narration : '');
   const headlineSize = layout === 'hero' ? 92 : layout === 'source' ? 76 : 72;
+  const family = theme.transitionFamily === 'snap' ? 'snap' : 'precision';
+  const motionIntensity = typeof theme.motionIntensity === 'number' ? theme.motionIntensity : 0.8;
+  const camera = cinematicCameraStyle(
+    frame,
+    durationInFrames ?? Math.max(1, fps * 7),
+    fps,
+    family,
+    motionIntensity * 0.42,
+  );
+  const headlineWords = scene.headline.trim().split(/\s+/).filter(Boolean);
+  const emphasized = new Set(
+    scene.emphasis
+      .flatMap((value) => value.toLowerCase().split(/\s+/))
+      .map((value) => value.replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean),
+  );
 
   const textBlock = (
     <div style={{maxWidth: layout === 'source' ? 720 : layout === 'data' ? 680 : 1380}}>
@@ -126,16 +143,39 @@ const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: 
       {scene.headline ? (
         <div
           style={{
+            fontSize: headlineSize,
+            fontWeight: 900,
+            letterSpacing: -3.2,
+            lineHeight: 0.96,
             marginTop: eyebrow ? 26 : 0,
+            maxWidth: layout === 'hero' ? 1380 : 760,
             opacity: headlineProgress,
-            transform: `translateY(${(1 - headlineProgress) * 30}px)`,
           }}
         >
-          <Headline
-            text={scene.headline}
-            maxChars={layout === 'hero' ? 26 : 20}
-            style={{fontSize: headlineSize, fontWeight: 900, letterSpacing: -3}}
-          />
+          {headlineWords.map((word, index) => {
+            const progress = headlineWordProgress(frame, fps, index);
+            const normalized = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const accentWord =
+              emphasized.has(normalized) ||
+              (layout === 'hero' && headlineWords.length <= 7 && index === headlineWords.length - 1);
+            return (
+              <span
+                key={`${word}-${index}`}
+                style={{
+                  color: accentWord ? accent(theme) : 'inherit',
+                  display: 'inline-block',
+                  filter: `blur(${((1 - progress) * 7).toFixed(2)}px)`,
+                  marginRight: 18,
+                  opacity: progress,
+                  textShadow: accentWord ? `0 0 34px ${accent(theme)}22` : 'none',
+                  transform: `translate3d(0,${((1 - progress) * 42).toFixed(2)}px,0) rotateX(${((1 - progress) * -9).toFixed(2)}deg)`,
+                  transformOrigin: 'center bottom',
+                }}
+              >
+                {word}
+              </span>
+            );
+          })}
         </div>
       ) : null}
       {supporting ? (
@@ -158,8 +198,13 @@ const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: 
 
   return (
     <SafeFrame style={frameStyle(theme)}>
+      <PremiumVfxBackdrop
+        theme={theme as unknown as import('../themes/types').ChannelTheme}
+        format="long"
+      />
       <div
         style={{
+          ...camera,
           alignItems: layout === 'data' ? 'center' : 'stretch',
           display: layout === 'data' ? 'grid' : 'flex',
           flexDirection: 'column',
@@ -167,6 +212,8 @@ const SceneShell = ({scene, theme, children, eyebrow}: SceneProps & {children?: 
           gridTemplateColumns: layout === 'data' ? '0.78fr 1.22fr' : undefined,
           height: '100%',
           justifyContent: 'center',
+          position: 'relative',
+          zIndex: 2,
         }}
       >
         {textBlock}
