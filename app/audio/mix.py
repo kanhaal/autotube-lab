@@ -99,6 +99,7 @@ def mix_episode_audio(
         command += ["-c:a", "pcm_s16le"]
     else:
         command += ["-c:a", "aac", "-b:a", "192k"]
+    command += ["-ar", "48000"]
     command.append(str(out))
     subprocess.run(
         command,
