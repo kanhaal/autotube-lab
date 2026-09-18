@@ -93,7 +93,7 @@ def render_narration(
     out_dir: Path,
     *,
     output_path: Path | None = None,
-    max_chars: int = 900,
+    max_chars: int = 280,
     normalizer=_normalize_wav,
     duration_probe=_probe_duration,
     concatenator=_concat_wavs,
