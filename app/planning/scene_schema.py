@@ -28,7 +28,7 @@ SCENE_TYPES = {
 
 MOTIONS = {"none", "fade", "push_left", "push_up", "slow_zoom", "punch_in", "parallax"}
 TRANSITIONS = {"cut", "crossfade", "wipe", "slide", "stinger"}
-TRANSITION_OUTS = {"glitch_rgb_split", "whoosh_zoom"}
+TRANSITION_OUTS = {"glitch_rgb_split", "whoosh_zoom", "whip_pan", "match_cut", "smash_cut", "cross_dissolve", "liquid_displacement"}
 EFFECT_KINDS = {
     "auto_zoom",
     "spotlight_dim",
@@ -60,7 +60,37 @@ EFFECT_KINDS = {
     "screen_shake",
     "scanline_flicker",
     "duotone_flash",
+    "light_leak",
+    "lens_flare",
+    "particle_burst",
+    "icon_morph",
+    "split_screen_multi_angle",
+    "rule_of_thirds_reframe",
+    "ken_burns",
 }
+SHOT_STYLES = {
+    "source_full",
+    "source_detail",
+    "kinetic_text",
+    "data_full",
+    "graphic_3d",
+    "split_screen",
+    "chapter",
+    "editorial",
+}
+CAMERA_PRESETS = {
+    "locked",
+    "dolly_in",
+    "dolly_out",
+    "orbit_left",
+    "orbit_right",
+    "whip_pan",
+    "handheld_micro",
+    "rack_push",
+    "crane_down",
+}
+AUDIO_CUE_KINDS = {"whoosh", "impact", "click", "riser", "braam", "ding", "glitch", "static"}
+MICRO_BEAT_KINDS = {"focus_punch", "callout", "tag_pop", "underline", "flash", "shake", "crop_shift"}
 FORMATS = {"longform", "short"}
 
 
@@ -81,6 +111,10 @@ class SceneSpec:
     data: dict[str, Any] = field(default_factory=dict)
     effects: tuple[dict[str, Any], ...] = ()
     transition_out: str | None = None
+    shot_style: str | None = None
+    camera: dict[str, Any] = field(default_factory=dict)
+    micro_beats: tuple[dict[str, Any], ...] = ()
+    audio_cues: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -108,6 +142,43 @@ def _effects(scene_id: str, payload: object) -> tuple[dict[str, Any], ...]:
     return tuple(normalized)
 
 
+def _object_list(
+    scene_id: str,
+    name: str,
+    payload: object,
+    *,
+    allowed_kinds: set[str] | None = None,
+) -> tuple[dict[str, Any], ...]:
+    if payload is None:
+        return ()
+    if not isinstance(payload, list):
+        raise ValueError(f"scene {scene_id} {name} must be an array")
+    normalized: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            raise ValueError(f"scene {scene_id} {name} item must be an object")
+        copied = dict(item)
+        if allowed_kinds is not None:
+            kind = str(copied.get("kind", "")).strip()
+            if kind not in allowed_kinds:
+                raise ValueError(f"unsupported {name} kind: {kind}")
+        normalized.append(copied)
+    return tuple(normalized)
+
+
+def _camera(scene_id: str, payload: object) -> dict[str, Any]:
+    if payload is None:
+        return {}
+    if not isinstance(payload, dict):
+        raise ValueError(f"scene {scene_id} camera must be an object")
+    copied = dict(payload)
+    preset = str(copied.get("preset", "locked")).strip()
+    if preset not in CAMERA_PRESETS:
+        raise ValueError(f"unsupported camera preset: {preset}")
+    copied["preset"] = preset
+    return copied
+
+
 def _scene(payload: dict) -> SceneSpec:
     scene_id = str(payload.get("id", "")).strip()
     narration = str(payload.get("narration", "")).strip()
@@ -117,6 +188,8 @@ def _scene(payload: dict) -> SceneSpec:
     fallback = str(payload.get("fallback_scene_type", "fallback_editorial")).strip()
     transition_out_raw = payload.get("transition_out")
     transition_out = str(transition_out_raw).strip() if transition_out_raw is not None else None
+    shot_style_raw = payload.get("shot_style")
+    shot_style = str(shot_style_raw).strip() if shot_style_raw is not None else None
 
     if not scene_id:
         raise ValueError("scene id is required")
@@ -130,6 +203,8 @@ def _scene(payload: dict) -> SceneSpec:
         raise ValueError(f"unsupported transition: {transition}")
     if transition_out is not None and transition_out not in TRANSITION_OUTS:
         raise ValueError(f"unsupported transition_out: {transition_out}")
+    if shot_style is not None and shot_style not in SHOT_STYLES:
+        raise ValueError(f"unsupported shot_style: {shot_style}")
     if fallback not in SCENE_TYPES:
         raise ValueError(f"unsupported fallback_scene_type: {fallback}")
 
@@ -153,6 +228,20 @@ def _scene(payload: dict) -> SceneSpec:
         data=data,
         effects=_effects(scene_id, payload.get("effects")),
         transition_out=transition_out,
+        shot_style=shot_style,
+        camera=_camera(scene_id, payload.get("camera")),
+        micro_beats=_object_list(
+            scene_id,
+            "micro_beats",
+            payload.get("micro_beats"),
+            allowed_kinds=MICRO_BEAT_KINDS,
+        ),
+        audio_cues=_object_list(
+            scene_id,
+            "audio_cues",
+            payload.get("audio_cues"),
+            allowed_kinds=AUDIO_CUE_KINDS,
+        ),
     )
 
 
