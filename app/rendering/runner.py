@@ -40,9 +40,14 @@ class RemotionRunner:
             f"--props={props_path}",
             "--codec=h264",
             "--audio-codec=aac",
-            "--crf=16",
+            "--crf=15",
             "--pixel-format=yuv420p",
             "--audio-bitrate=192K",
+            "--x264-preset=slow",
+            "--concurrency=50%",
+            "--image-format=png",
+            "--color-space=bt709",
+            "--sample-rate=48000",
         ]
 
     def _write_props(self, package_dir: Path) -> Path:
