@@ -150,12 +150,135 @@ def _generate_audio_fixture(root: Path) -> tuple[Path, Path]:
     return music, sfx
 
 
+def _v4_fixture_scenes(story: dict, format_name: str) -> list[dict]:
+    channel_id = story["channel_id"]
+    energetic = channel_id == "lobbysignal"
+    scenes = [dict(scene) for scene in story[format_name]["scenes"]]
+    transition_sequence = (
+        ["whip_pan", "match_cut", "glitch_rgb_split", "liquid_displacement", "smash_cut", "cross_dissolve"]
+        if energetic
+        else ["whoosh_zoom", "match_cut", "cross_dissolve", "match_cut", "whoosh_zoom", "cross_dissolve"]
+    )
+    for index, scene in enumerate(scenes):
+        scene_type = scene["scene_type"]
+        if scene_type == "source_browser":
+            scene["shot_style"] = "source_full"
+            scene["camera"] = {
+                "preset": "handheld_micro" if energetic else "dolly_in",
+                "intensity": 1.05 if energetic else 0.72,
+                "target": {"x": 0.58, "y": 0.36},
+            }
+            scene["micro_beats"] = [
+                {"at": 0.85, "kind": "callout"},
+                {"at": 1.65, "kind": "crop_shift"},
+                {"at": 2.6, "kind": "tag_pop"},
+            ]
+            scene["effects"] = [
+                {"kind": "rule_of_thirds_reframe", "x": 0.58, "y": 0.36, "strength": 0.5},
+                {"kind": "light_leak", "opacity": 0.12 if energetic else 0.08},
+            ]
+            scene["audio_cues"] = [
+                {"at": 0.1, "kind": "whoosh", "volume": 0.15 if energetic else 0.11},
+                {"at": 1.55, "kind": "click", "volume": 0.08},
+            ]
+        elif scene_type == "stat":
+            value = scene.get("data", {}).get("value", 0)
+            suffix = scene.get("data", {}).get("suffix", "")
+            scene["shot_style"] = "kinetic_text"
+            scene["camera"] = {"preset": "rack_push", "intensity": 0.86 if energetic else 0.62}
+            scene["micro_beats"] = [
+                {"at": 0.75, "kind": "focus_punch"},
+                {"at": 1.45, "kind": "underline"},
+            ]
+            scene["effects"] = [
+                {
+                    "kind": "stat_count_up",
+                    "final_value": value,
+                    "verified_value": value,
+                    "suffix": suffix,
+                },
+                {"kind": "lens_flare", "strength": 0.18 if energetic else 0.11},
+            ]
+            scene["audio_cues"] = [
+                {"at": 0.62, "kind": "lowpass", "duration": 0.58},
+                {"at": 1.0, "kind": "ding", "volume": 0.11},
+            ]
+        elif scene_type == "chart":
+            scene["shot_style"] = "data_full"
+            scene["camera"] = {"preset": "crane_down", "intensity": 0.82 if energetic else 0.58}
+            scene["micro_beats"] = [
+                {"at": 0.8, "kind": "underline"},
+                {"at": 1.7, "kind": "focus_punch"},
+                {"at": 2.5, "kind": "flash"},
+            ]
+            scene["effects"] = [
+                {"kind": "film_grain"},
+                {"kind": "vignette_pulse"},
+            ]
+            scene["audio_cues"] = [
+                {"at": 0.55, "kind": "riser", "volume": 0.09 if energetic else 0.065},
+                {"at": 1.65, "kind": "impact", "volume": 0.12 if energetic else 0.085},
+            ]
+        elif scene_type == "timeline":
+            scene["shot_style"] = "graphic_3d"
+            scene["camera"] = {
+                "preset": "orbit_right" if energetic else "orbit_left",
+                "intensity": 1.0 if energetic else 0.7,
+            }
+            scene["micro_beats"] = [
+                {"at": 0.9, "kind": "tag_pop"},
+                {"at": 2.0, "kind": "focus_punch"},
+            ]
+            scene["effects"] = [
+                {"kind": "icon_morph", "from": "plus", "to": "diamond", "size": 112},
+                {"kind": "chromatic_pulse"} if energetic else {"kind": "light_leak", "opacity": 0.08},
+            ]
+            scene["audio_cues"] = [
+                {"at": 0.5, "kind": "whoosh", "volume": 0.13 if energetic else 0.09},
+                {"at": 1.8, "kind": "click", "volume": 0.08},
+            ]
+        elif scene_type in {"comparison", "before_after"}:
+            scene["shot_style"] = "split_screen"
+            scene["camera"] = {"preset": "dolly_out", "intensity": 0.82 if energetic else 0.55}
+            scene["micro_beats"] = [
+                {"at": 0.75, "kind": "crop_shift"},
+                {"at": 1.6, "kind": "focus_punch"},
+            ]
+            scene["effects"] = [
+                {"kind": "particle_burst", "at": 0.28, "count": 22 if energetic else 14},
+                {"kind": "duotone_flash"} if energetic else {"kind": "underline_sweep"},
+            ]
+            scene["audio_cues"] = [
+                {"at": 0.55, "kind": "riser", "volume": 0.10 if energetic else 0.07},
+                {"at": 1.45, "kind": "impact", "volume": 0.14 if energetic else 0.095},
+            ]
+        else:
+            scene["shot_style"] = "kinetic_text"
+            scene["camera"] = {
+                "preset": "whip_pan" if energetic else "rack_push",
+                "intensity": 0.95 if energetic else 0.6,
+            }
+            scene["micro_beats"] = [
+                {"at": 0.75, "kind": "underline"},
+                {"at": 1.55, "kind": "tag_pop"},
+            ]
+            scene["effects"] = [
+                {"kind": "scanline_flicker"} if energetic else {"kind": "film_grain"},
+            ]
+            scene["audio_cues"] = [
+                {"at": 0.3, "kind": "braam", "volume": 0.09 if energetic else 0.065},
+            ]
+
+        scene["transition_out"] = transition_sequence[min(index, len(transition_sequence) - 1)]
+    return scenes
+
+
 def _scene_plan(story: dict, format_name: str):
     return parse_scene_plan(
         {
             "channel_id": story["channel_id"],
             "format": "longform" if format_name == "long" else "short",
-            "scenes": story[format_name]["scenes"],
+            "scenes": _v4_fixture_scenes(story, format_name),
         }
     )
 
