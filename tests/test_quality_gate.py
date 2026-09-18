@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -171,3 +172,58 @@ def test_valid_short_passes_and_enforces_native_vertical_duration(
     report = validation.validate_short(outputs)
     assert report.ok is False
     assert {"wrong_resolution", "short_duration"} <= _codes(report)
+
+
+def _effect_package(tmp_path: Path, effects: list[dict]) -> Path:
+    package = tmp_path / "effect-package"
+    package.mkdir()
+    (package / "scenes.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "channel_id": "kernelrush",
+                "format": "longform",
+                "scenes": [
+                    {
+                        "id": "s1",
+                        "narration": "Verified stat.",
+                        "purpose": "evidence",
+                        "scene_type": "stat",
+                        "headline": "42",
+                        "subheadline": "",
+                        "source_ids": [],
+                        "asset_ids": [],
+                        "motion": "none",
+                        "emphasis": [],
+                        "transition": "cut",
+                        "fallback_scene_type": "fallback_editorial",
+                        "data": {},
+                        "effects": effects,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return package
+
+
+def test_effect_qa_rejects_meme_flash_over_hard_cap(tmp_path: Path):
+    from app.quality.validation import validate_effect_contracts
+
+    package = _effect_package(tmp_path, [{"kind": "meme_flash", "duration_seconds": 1.8}])
+    issues = validate_effect_contracts(package)
+
+    assert "meme_flash_duration" in {issue.code for issue in issues}
+
+
+def test_effect_qa_rejects_stat_count_up_value_not_matching_verified_value(tmp_path: Path):
+    from app.quality.validation import validate_effect_contracts
+
+    package = _effect_package(
+        tmp_path,
+        [{"kind": "stat_count_up", "final_value": 42, "verified_value": 41}],
+    )
+    issues = validate_effect_contracts(package)
+
+    assert "stat_count_up_unverified" in {issue.code for issue in issues}

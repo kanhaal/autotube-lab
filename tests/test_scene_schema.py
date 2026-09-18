@@ -64,4 +64,44 @@ def test_scene_schema_normalizes_list_fields_to_tuples():
     assert scene.source_ids == ("source_1",)
     assert scene.asset_ids == ()
     assert scene.emphasis == ("local",)
+    assert scene.effects == ()
+    assert scene.transition_out is None
     assert plan.schema_version == "1"
+
+
+def test_scene_schema_accepts_additive_effects_and_transition_out():
+    payload = base_payload()
+    payload["scenes"][0]["effects"] = [
+        {
+            "kind": "auto_zoom",
+            "target": {"x": 0.15, "y": 0.2, "width": 0.45, "height": 0.3},
+            "scale": 1.2,
+        },
+        {"kind": "ticker_overlay", "text": "Rumor", "badge": "UNCONFIRMED"},
+    ]
+    payload["scenes"][0]["transition_out"] = "whoosh_zoom"
+
+    scene = parse_scene_plan(payload).scenes[0]
+
+    assert [effect["kind"] for effect in scene.effects] == ["auto_zoom", "ticker_overlay"]
+    assert scene.transition_out == "whoosh_zoom"
+
+
+def test_scene_schema_rejects_unknown_effect_and_transition_out():
+    payload = base_payload()
+    payload["scenes"][0]["effects"] = [{"kind": "not_real"}]
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "effect" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+    payload = base_payload()
+    payload["scenes"][0]["transition_out"] = "random_transition"
+    try:
+        parse_scene_plan(payload)
+    except ValueError as exc:
+        assert "transition_out" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
