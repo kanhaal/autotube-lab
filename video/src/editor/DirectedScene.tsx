@@ -352,7 +352,7 @@ const SplitScreenShot = (props: DirectedSceneProps) => {
         {asset ? (
           <EditorialMedia asset={asset} style={{filter: 'saturate(.82) brightness(.72)'}} />
         ) : (
-          <GpuDepthStage theme={theme} opacity={0.7} />
+          <DepthBackground theme={theme} profile={props.profile} opacity={0.7} />
         )}
         <div
           style={{
