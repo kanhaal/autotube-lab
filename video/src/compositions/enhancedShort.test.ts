@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {activeShortVisual} from './EnhancedShortComposition';
+import {activeShortVisual, shouldUseLegacySourceOverlay} from './EnhancedShortComposition';
 import type {RenderPackageV1} from '../types';
 
 const pkg: RenderPackageV1 = {
@@ -137,5 +137,20 @@ describe('enhanced Short presentation', () => {
     ];
 
     expect(activeShortVisual(transitionPkg, 447)?.scene.id).toBe('s2');
+  });
+});
+
+
+describe('V4 Short overlay routing', () => {
+  it('does not stack the legacy source card on top of V4 directed shots', () => {
+    const v4 = structuredClone(pkg);
+    v4.manifest.render_effects = {v4_editor: true};
+    expect(shouldUseLegacySourceOverlay(v4)).toBe(false);
+  });
+
+  it('keeps the legacy overlay available for non-V4 packages', () => {
+    const legacy = structuredClone(pkg);
+    legacy.manifest.render_effects = {v4_editor: false};
+    expect(shouldUseLegacySourceOverlay(legacy)).toBe(true);
   });
 });
