@@ -141,7 +141,8 @@ def main() -> None:
             log = root / "remotion-render.log"
             if log.is_file():
                 print("\n===== REMOTION LOG =====\n")
-                print(log.read_text(encoding="utf-8", errors="replace"))
+                rendered_log = log.read_text(encoding="utf-8", errors="replace")
+                print(rendered_log.encode("ascii", "backslashreplace").decode("ascii"))
             raise
 
         if not out.is_file() or out.stat().st_size <= 0:
