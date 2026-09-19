@@ -106,7 +106,6 @@ const proportionalWindows = (pkg: RenderPackageV1): SceneFrameWindow[] => {
       : Math.round((cumulativeWeight / totalWeight) * totalFrames);
     return {from, durationInFrames: Math.max(1, next - from)};
   });
-  return applyCutBiases(pkg, base);
 };
 
 const applyCutBiases = (
@@ -177,4 +176,5 @@ export const sceneFrameWindows = (pkg: RenderPackageV1): SceneFrameWindow[] => {
     previousFrame = next;
     return {from, durationInFrames: Math.max(1, next - from)};
   });
+  return applyCutBiases(pkg, base);
 };
