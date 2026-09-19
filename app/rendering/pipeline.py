@@ -9,7 +9,7 @@ from app.assets.models import AssetManifest
 from app.assets.service import prepare_assets
 from app.audio.library import AudioLibrary
 from app.audio.mix import mix_episode_audio
-from app.audio.sound_design import build_lowpass_windows, build_sound_design_events
+from app.audio.sound_design import build_lowpass_windows, build_sound_design_events, needs_sound_design
 from app.captions.align import FasterWhisperTranscriber, align_narration
 from app.editorial.ollama import OllamaJsonClient
 from app.rendering.package import build_render_package
@@ -81,7 +81,7 @@ def _master_audio(
 
     events = ()
     lowpass_windows = ()
-    if scene_plan is not None:
+    if scene_plan is not None and needs_sound_design(scene_plan):
         duration = duration_seconds
         if duration is None or duration <= 0:
             try:
