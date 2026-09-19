@@ -56,7 +56,7 @@ UI, subtle 3D stages, clean match cuts, and quiet moments between denser informa
 precise rather than flashy. Use whoosh/impact/click sound design sparingly. Plan approximately
 15-25 semantic scenes, but create micro-beats inside scenes so a scene may contain multiple edits."""
 
-LOBBYSIGNAL = """LobbySignal V4 direction: fast gaming/internet-culture editing with full-bleed
+LOBBYSIGNAL = """LobbySignal V4 direction: faster gaming/internet-culture editing with full-bleed
 gameplay/source media, aggressive but controlled crop changes, whip/match/smash cuts, kinetic type,
 split-screen comparisons, freeze-frame callouts, glitch accents, 3D graphic moments, and stronger
 impact/glitch/riser sound design. Keep it legible and intentional rather than chaotic. Plan
