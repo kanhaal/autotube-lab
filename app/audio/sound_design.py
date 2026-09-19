@@ -175,7 +175,7 @@ def build_sound_design_events(
     windows = _scene_windows(scene_plan, duration)
     requested: list[tuple[int, str, float]] = []
 
-    for scene, (start, end) in zip(scene_plan.scenes, windows):
+    for scene, (start, end) in zip(scene_plan.scenes, windows, strict=True):
         scene_duration = max(0.001, end - start)
         for cue in scene.audio_cues:
             kind = str(cue.get("kind", "")).strip()
@@ -240,7 +240,7 @@ def build_lowpass_windows(
     duration = max(0.001, float(duration_seconds))
     windows = _scene_windows(scene_plan, duration)
     result: list[tuple[int, int]] = []
-    for scene, (start, end) in zip(scene_plan.scenes, windows):
+    for scene, (start, end) in zip(scene_plan.scenes, windows, strict=True):
         scene_duration = max(0.001, end - start)
         for cue in scene.audio_cues:
             if str(cue.get("kind", "")).strip() != "lowpass":
