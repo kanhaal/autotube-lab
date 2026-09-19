@@ -257,3 +257,16 @@ def build_lowpass_windows(
                     )
                 )
     return tuple(result[:8])
+
+
+
+def needs_sound_design(scene_plan) -> bool:
+    for scene in scene_plan.scenes:
+        if scene.audio_cues:
+            return True
+        if (scene.transition_out or "") in _TRANSITION_CUES:
+            return True
+        effect_kinds = {str(effect.get("kind", "")) for effect in scene.effects}
+        if any(kind in effect_kinds for kind in _EFFECT_CUES):
+            return True
+    return False
