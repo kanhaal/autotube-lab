@@ -20,4 +20,6 @@ foreach ($fixture in $fixtures) {
     }
 }
 
-Write-Host "Sample renders complete. Review output/samples/kernelrush and output/samples/lobbysignal before approving the professional renderer."
+Write-Host "Sample renders complete. V4 keeps every render under output/samples/<channel>/runs/<run-id>."
+Write-Host "Use output/samples/kernelrush/latest.json and output/samples/lobbysignal/latest.json to find the newest runs."
+Write-Host "Do not delete older runs unless you intentionally want to remove render history."

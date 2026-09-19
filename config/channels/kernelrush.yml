@@ -26,4 +26,10 @@ render_effects:
   default_transition_out: whoosh_zoom
   intro_sting: true
   lower_third: true
+  v4_editor: true
+  gpu_depth: true
+  camera_intensity: 0.82
+  microbeat_strength: 0.78
+  source_first: true
+  caption_mode: editorial
   texture: subtle_grain

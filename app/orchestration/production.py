@@ -330,19 +330,36 @@ def build_professional_stages(
             return {}
         from app.rendering.pipeline import _master_audio
 
-        master = audio_masterer or _master_audio
-        result: ProductionState = {
-            "audio": Path(master(state["narration"], channel_cfg, output / "master.wav"))
-        }
+        if audio_masterer is None:
+            long_audio = _master_audio(
+                state["narration"],
+                channel_cfg,
+                output / "master.wav",
+                scene_plan=state.get("scene_plan"),
+            )
+        else:
+            long_audio = audio_masterer(
+                state["narration"],
+                channel_cfg,
+                output / "master.wav",
+            )
+        result: ProductionState = {"audio": Path(long_audio)}
         if state.get("short_narration") is not None and state.get("short_captions") is not None:
             try:
-                result["short_audio"] = Path(
-                    master(
+                if audio_masterer is None:
+                    short_master = _master_audio(
+                        state["short_narration"],
+                        channel_cfg,
+                        output / "short-master.wav",
+                        scene_plan=state.get("short_scene_plan"),
+                    )
+                else:
+                    short_master = audio_masterer(
                         state["short_narration"],
                         channel_cfg,
                         output / "short-master.wav",
                     )
-                )
+                result["short_audio"] = Path(short_master)
             except Exception as exc:  # noqa: BLE001 - optional Short cannot invalidate long-form
                 result["short_error"] = str(exc)
         return result

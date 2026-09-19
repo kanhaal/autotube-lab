@@ -160,6 +160,9 @@ const SourceOverlay = ({visual, theme}: {visual: ActiveShortVisual; theme: Chann
   );
 };
 
+export const shouldUseLegacySourceOverlay = (pkg: RenderPackageV1): boolean =>
+  pkg.manifest.render_effects?.v4_editor !== true;
+
 export const EnhancedShortComposition = ({
   pkg,
   theme,
@@ -172,7 +175,9 @@ export const EnhancedShortComposition = ({
   return (
     <AbsoluteFill>
       <ShortComposition pkg={pkg} theme={theme} />
-      {visual?.asset ? <SourceOverlay visual={visual} theme={theme} /> : null}
+      {shouldUseLegacySourceOverlay(pkg) && visual?.asset ? (
+        <SourceOverlay visual={visual} theme={theme} />
+      ) : null}
     </AbsoluteFill>
   );
 };

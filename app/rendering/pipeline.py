@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,6 +9,7 @@ from app.assets.models import AssetManifest
 from app.assets.service import prepare_assets
 from app.audio.library import AudioLibrary
 from app.audio.mix import mix_episode_audio
+from app.audio.sound_design import build_lowpass_windows, build_sound_design_events, needs_sound_design
 from app.captions.align import FasterWhisperTranscriber, align_narration
 from app.editorial.ollama import OllamaJsonClient
 from app.rendering.package import build_render_package
@@ -58,7 +60,14 @@ def _release(resource) -> None:
         release()
 
 
-def _master_audio(narration: Path, channel_cfg: dict, out: Path) -> Path:
+def _master_audio(
+    narration: Path,
+    channel_cfg: dict,
+    out: Path,
+    *,
+    scene_plan=None,
+    duration_seconds: float | None = None,
+) -> Path:
     audio_cfg = channel_cfg.get("audio") or {}
     if not isinstance(audio_cfg, dict):
         audio_cfg = {}
@@ -69,7 +78,63 @@ def _master_audio(narration: Path, channel_cfg: dict, out: Path) -> Path:
         selected = _configured_audio_library().select("music", channel_id, mood)
         if selected is not None:
             music = selected.path
-    return Path(mix_episode_audio(Path(narration), music, (), Path(out)))
+
+    events = ()
+    lowpass_windows = ()
+    if scene_plan is not None and needs_sound_design(scene_plan):
+        duration = duration_seconds
+        if duration is None or duration <= 0:
+            try:
+                from app.rendering.ffmpeg import probe_media
+
+                duration = probe_media(Path(narration)).format_duration
+            except Exception:  # noqa: BLE001 - sound design enrichment must not break valid mastering
+                duration = None
+        if duration is not None and duration > 0:
+            events = build_sound_design_events(
+                scene_plan,
+                duration_seconds=duration,
+                out_dir=Path(out).parent / "sound-design",
+                channel_id=channel_id,
+            )
+            lowpass_windows = build_lowpass_windows(
+                scene_plan,
+                duration_seconds=duration,
+            )
+    return Path(
+        mix_episode_audio(
+            Path(narration),
+            music,
+            events,
+            Path(out),
+            lowpass_windows=lowpass_windows,
+        )
+    )
+
+
+def _caption_duration(captions) -> float | None:
+    ends = [
+        float(getattr(cue, "end", 0.0) or 0.0)
+        for cue in (captions or ())
+        if float(getattr(cue, "end", 0.0) or 0.0) > 0
+    ]
+    return max(ends) if ends else None
+
+
+def _invoke_master_audio(master, narration: Path, channel_cfg: dict, out: Path, *, scene_plan, captions):
+    kwargs = {}
+    try:
+        parameters = inspect.signature(master).parameters.values()
+        names = {parameter.name for parameter in parameters}
+        accepts_kwargs = any(parameter.kind is inspect.Parameter.VAR_KEYWORD for parameter in parameters)
+    except (TypeError, ValueError):
+        names = set()
+        accepts_kwargs = False
+    if accepts_kwargs or "scene_plan" in names:
+        kwargs["scene_plan"] = scene_plan
+    if accepts_kwargs or "duration_seconds" in names:
+        kwargs["duration_seconds"] = _caption_duration(captions)
+    return Path(master(narration, channel_cfg, out, **kwargs))
 
 
 def render_professional_episode(
@@ -106,7 +171,14 @@ def render_professional_episode(
         captions = caption_aligner(narration, script, speech_transcriber)
     finally:
         _release(speech_transcriber)
-    master_audio = _master_audio(narration, channel_cfg, output / "master.wav")
+    master_audio = _invoke_master_audio(
+        _master_audio,
+        narration,
+        channel_cfg,
+        output / "master.wav",
+        scene_plan=scene_plan,
+        captions=captions,
+    )
     long_package = package_builder(
         channel_cfg,
         title,
@@ -161,10 +233,13 @@ def render_professional_episode(
             short_captions = caption_aligner(short_audio, short_story.script, speech_transcriber)
         finally:
             _release(speech_transcriber)
-        short_master_audio = _master_audio(
+        short_master_audio = _invoke_master_audio(
+            _master_audio,
             short_audio,
             channel_cfg,
             output / "short-master.wav",
+            scene_plan=short_story.scene_plan,
+            captions=short_captions,
         )
         short_package = package_builder(
             channel_cfg,

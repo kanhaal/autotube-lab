@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -119,7 +120,11 @@ def test_dry_run_emits_asset_manifest_and_local_verified_png(monkeypatch, tmp_pa
         asset_capturer=FakeCapturer(),
     )
 
-    episode_dir = tmp_path / "output" / result["episode"]
+    latest = json.loads(
+        (tmp_path / "output" / "kernelrush" / "latest.json").read_text(encoding="utf-8")
+    )
+    episode_dir = Path(latest["path"])
+    assert episode_dir.parts[-3:-1] == ("kernelrush", "runs")
     assert result["status"] == "generated"
     assert result["asset_manifest"] == str(episode_dir / "asset-manifest.json")
     assert (episode_dir / "asset-manifest.json").exists()
